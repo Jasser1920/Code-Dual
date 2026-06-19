@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  githubId      String    @unique @map("github_id")
+  elo           Int       @default(1000)
+  rankTier      String    @default("Bronze") @map("rank_tier")
+  preferredLang String    @default("javascript") @map("preferred_lang")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  player1Duels Duel[]       @relation("Player1")
+  player2Duels Duel[]       @relation("Player2")
+  wonDuels     Duel[]       @relation("Winner")
+  submissions  Submission[]
+  eloHistory   EloHistory[]
+
+  @@index([elo])
+  @@map("users")
+}
+
+model Problem {
+  id           String   @id @default(uuid())
+  title        String
+  difficulty   String
+  visibleTests Json     @map("visible_tests")
+  hiddenTests  Json     @map("hidden_tests")
+  tags         String[]
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  duels           Duel[]
+  dailyChallenges DailyChallenge[]
+
+  @@map("problems")
+}
+
+model Duel {
+  id        String    @id @default(uuid())
+  player1Id String    @map("player1_id")
+  player2Id String    @map("player2_id")
+  problemId String    @map("problem_id")
+  winnerId  String?   @map("winner_id")
+  status    String    @default("pending")
+  isRanked  Boolean   @default(true) @map("is_ranked")
+  startedAt DateTime? @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  player1     User         @relation("Player1", fields: [player1Id], references: [id])
+  player2     User         @relation("Player2", fields: [player2Id], references: [id])
+  winner      User?        @relation("Winner", fields: [winnerId], references: [id])
+  problem     Problem      @relation(fields: [problemId], references: [id])
+  submissions Submission[]
+  eloHistory  EloHistory[]
+
+  @@index([player1Id, player2Id])
+  @@map("duels")
+}
+
+model Submission {
+  id              String   @id @default(uuid())
+  duelId          String   @map("duel_id")
+  playerId        String   @map("player_id")
+  code            String
+  language        String
+  correctness     Decimal  @default(0)
+  complexityScore Decimal  @default(0) @map("complexity_score")
+  qualityScore    Decimal  @default(0) @map("quality_score")
+  totalScore      Decimal  @default(0) @map("total_score")
+  aiExplanation   String?  @map("ai_explanation")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  duel   Duel @relation(fields: [duelId], references: [id])
+  player User @relation(fields: [playerId], references: [id])
+
+  @@index([duelId])
+  @@map("submissions")
+}
+
+model EloHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  duelId    String   @map("duel_id")
+  eloBefore Int      @map("elo_before")
+  eloAfter  Int      @map("elo_after")
+  delta     Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+  duel Duel @relation(fields: [duelId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("elo_history")
+}
+
+model DailyChallenge {
+  id          String   @id @default(uuid())
+  problemId   String   @map("problem_id")
+  date        DateTime @unique
+  attempts    Int      @default(0)
+  completions Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  problem Problem @relation(fields: [problemId], references: [id])
+
+  @@index([date])
+  @@map("daily_challenges")
+}
