@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin'
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
-import type { JwtPayload } from '../../shared/src/index.ts'
+import type { JwtPayload } from '@code-dual/shared'
 
 import '@fastify/jwt'
 

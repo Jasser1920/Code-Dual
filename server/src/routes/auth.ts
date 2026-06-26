@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import { prisma } from '../db.ts'
-import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailer.ts'
+import { prisma } from '../db.js'
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailer.js'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const CLIENT_ID = process.env.GITHUB_CLIENT_ID

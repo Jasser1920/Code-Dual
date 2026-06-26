@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
-import { prisma } from '../db.ts'
+import { prisma } from '../db.js'
 import type { UpdateProfilePayload } from '@code-dual/shared'
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {

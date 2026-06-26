@@ -7,9 +7,9 @@ import { Server } from 'socket.io'
 import dotenv from 'dotenv'
 import type { UserProfile, DuelStatus } from '@code-dual/shared'
 
-import authPlugin from './plugins/auth.ts'
-import authRoutes from './routes/auth.ts'
-import profileRoutes from './routes/profile.ts'
+import authPlugin from './plugins/auth.js'
+import authRoutes from './routes/auth.js'
+import profileRoutes from './routes/profile.js'
 
 dotenv.config()
 
