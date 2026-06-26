@@ -8,7 +8,7 @@ import { Input } from "../components/ui/input";
 export default function Login() {
   const navigate = useNavigate();
   const { login, error: authError } = useAuthStore();
-  
+
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -54,19 +54,21 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest block mb-2">Email / Username</label>
+            <label className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest block mb-2">Email or Username</label>
             <Input
               type="text"
-              autoComplete="username"
               required
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={e => setForm({ ...form, email: e.target.value })}
               className="font-['JetBrains_Mono'] h-11"
-              placeholder="you@domain.com"
+              placeholder="Email or Username"
             />
           </div>
           <div>
-            <label className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest block mb-2">Password</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest block">Password</label>
+              <Link to="/forgot-password" className="font-['JetBrains_Mono'] text-xs text-accent hover:underline">Forgot password?</Link>
+            </div>
             <div className="relative">
               <Input
                 type={showPass ? "text" : "password"}
@@ -75,7 +77,7 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="font-['JetBrains_Mono'] pr-10 h-11"
-                placeholder="••••••••"
+                placeholder="Password"
               />
               <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowPass(!showPass)}>
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}

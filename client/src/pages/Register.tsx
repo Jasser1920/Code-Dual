@@ -103,7 +103,7 @@ export default function Register() {
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 className="font-['JetBrains_Mono'] h-11"
-                placeholder="your_handle"
+                placeholder="User name"
               />
             </div>
             <div>

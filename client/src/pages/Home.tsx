@@ -57,7 +57,7 @@ function DuelMockup() {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { isProfileComplete, isAuthenticated } = useAuthStore();
+  const { isProfileComplete, isAuthenticated, user } = useAuthStore();
 
   const features = [
     { icon: <Zap size={18} />, title: "Sub-100ms Judging", desc: "Our execution engine compiles and runs your code against all test cases in under 100 milliseconds on average." },
@@ -77,21 +77,6 @@ export default function Home() {
 
   return (
     <div>
-      {isAuthenticated && !isProfileComplete() && (
-        <div className="bg-red-500/10 border-b border-red-500/30 text-red-500 px-6 py-3 flex items-center justify-between font-['JetBrains_Mono'] text-sm">
-          <div className="flex items-center gap-3">
-            <AlertTriangle size={18} />
-            <span>Your profile is incomplete. You will need to complete it before joining a duel.</span>
-          </div>
-          <button 
-            onClick={() => navigate("/profile/edit")}
-            className="font-bold underline hover:no-underline flex items-center gap-1 shrink-0"
-          >
-            Complete Profile <ArrowRight size={14} />
-          </button>
-        </div>
-      )}
-
       {/* Hero */}
       <section className="relative min-h-[calc(100vh-3.5rem)] flex flex-col justify-center overflow-hidden">
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />

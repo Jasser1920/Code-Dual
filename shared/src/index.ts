@@ -13,13 +13,14 @@ export interface UserProfile {
 export interface AuthUser extends UserProfile {
   email: string
   githubId?: string
+  emailVerified: boolean
 }
 
 export interface UpdateProfilePayload {
   location?: string
-  mobileNumber?: string
-  avatarUrl?: string
-  preferredLang?: string
+  mobileNumber?: string | null;
+  avatarUrl?: string | null;
+  preferredLang?: string;
 }
 
 export interface JwtPayload {

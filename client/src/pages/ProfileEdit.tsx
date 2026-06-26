@@ -62,7 +62,7 @@ export default function ProfileEdit() {
         location: user.location || "",
         mobileNumber: user.mobileNumber ? formatTunisianNumber(user.mobileNumber) : "+216 ",
         avatarUrl: user.avatarUrl || "",
-        preferredLang: user.preferredLang || "javascript",
+        preferredLang: user.preferredLang || "Python",
       });
     }
   }, [user]);
@@ -298,8 +298,8 @@ export default function ProfileEdit() {
               onChange={(e) => setForm({ ...form, preferredLang: e.target.value })}
               className="w-full bg-secondary border border-border px-4 py-3 text-foreground font-['JetBrains_Mono'] text-sm focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
             >
-              {LANGUAGES.map((lang) => (
-                <option key={lang} value={lang.toLowerCase()}>
+              {LANGUAGES.filter(l => l !== "All").map((lang) => (
+                <option key={lang} value={lang}>
                   {lang}
                 </option>
               ))}

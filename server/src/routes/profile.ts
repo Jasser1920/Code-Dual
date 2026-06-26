@@ -29,6 +29,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         location: true,
         mobileNumber: true,
         preferredLang: true,
+        emailVerified: true,
       },
     })
 
@@ -63,6 +64,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
           location: true,
           mobileNumber: true,
           preferredLang: true,
+          emailVerified: true,
         },
       })
 

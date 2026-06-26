@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { Code2, Home, ChevronDown, Settings, Edit3, LogOut } from "lucide-react";
+import { Code2, Home, ChevronDown, Settings, Edit3, LogOut, AlertTriangle, Send } from "lucide-react";
 import Avatar from "./Avatar";
+import { api } from "../api/axios";
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, isProfileComplete } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "success" | "error">("idle");
 
   const hiddenRoutes = ["/login", "/register", "/profile/edit"];
   if (!isAuthenticated || hiddenRoutes.includes(location.pathname)) {
@@ -20,9 +23,57 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    setResendStatus("idle");
+    try {
+      await api.post('/auth/resend-verification');
+      setResendStatus("success");
+      setTimeout(() => setResendStatus("idle"), 5000);
+    } catch {
+      setResendStatus("error");
+      setTimeout(() => setResendStatus("idle"), 5000);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-14">
+    <nav className="sticky top-0 left-0 right-0 z-50 flex flex-col bg-background/90 backdrop-blur-md border-b border-border">
+      {/* Profile Incomplete Banner */}
+      {!isProfileComplete() && (
+        <div className="bg-red-500/10 border-b border-red-500/30 text-red-500 px-6 py-2.5 flex items-center justify-between font-['JetBrains_Mono'] text-xs">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={14} />
+            <span>Your profile is incomplete. You will need to complete it before joining a duel.</span>
+          </div>
+          <button 
+            onClick={() => navigate("/profile/edit")}
+            className="font-bold underline hover:no-underline flex items-center gap-1 shrink-0"
+          >
+            Complete Profile
+          </button>
+        </div>
+      )}
+
+      {/* Email Verification Banner */}
+      {user && !user.emailVerified && (
+        <div className="bg-orange-500/10 border-b border-orange-500/30 text-orange-500 px-6 py-2.5 flex items-center justify-between font-['JetBrains_Mono'] text-xs">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={14} />
+            <span>Please check your inbox to verify your email address.</span>
+          </div>
+          <button 
+            onClick={handleResendVerification}
+            disabled={isResending || resendStatus === "success"}
+            className={`font-bold flex items-center gap-1 shrink-0 ${resendStatus === "success" ? "text-emerald-500" : resendStatus === "error" ? "text-destructive" : "underline hover:no-underline"}`}
+          >
+            {isResending ? "Sending..." : resendStatus === "success" ? "Sent!" : resendStatus === "error" ? "Failed!" : <>Resend <Send size={12} /></>}
+          </button>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-14 w-full">
         {/* Left: Logo */}
         <NavLink to="/" className="flex items-center gap-2">
           <Code2 size={18} className="text-accent" />
