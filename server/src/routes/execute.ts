@@ -56,7 +56,7 @@ const executeRoutes: FastifyPluginAsync = async (fastify, opts) => {
             const filePath = path.join(tmpDir, `${fileName}.py`)
             await fs.writeFile(filePath, code)
             const { stdout: out, stderr: err } = await execAsync(
-              `python ${filePath}`
+              `python3 ${filePath}`
             )
             stdout = out
             stderr = err
