@@ -1,42 +1,54 @@
-import { useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "../store/useAuthStore";
-import { Code2, Home, ChevronDown, Settings, Edit3, LogOut, AlertTriangle, Send } from "lucide-react";
-import Avatar from "./Avatar";
-import { api } from "../api/axios";
+import { useState } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
+import {
+  Code2,
+  Home,
+  ChevronDown,
+  Settings,
+  Edit3,
+  LogOut,
+  AlertTriangle,
+  Send,
+  Trophy,
+} from 'lucide-react'
+import Avatar from './Avatar'
+import { api } from '../api/axios'
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout, isProfileComplete } = useAuthStore();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const [resendStatus, setResendStatus] = useState<"idle" | "success" | "error">("idle");
+  const { user, isAuthenticated, logout, isProfileComplete } = useAuthStore()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [resendStatus, setResendStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle')
 
-  const hiddenRoutes = ["/login", "/register", "/profile/edit"];
+  const hiddenRoutes = ['/login', '/register', '/profile/edit']
   if (!isAuthenticated || hiddenRoutes.includes(location.pathname)) {
-    return null;
+    return null
   }
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+    await logout()
+    navigate('/login')
+  }
 
   const handleResendVerification = async () => {
-    setIsResending(true);
-    setResendStatus("idle");
+    setIsResending(true)
+    setResendStatus('idle')
     try {
-      await api.post('/auth/resend-verification');
-      setResendStatus("success");
-      setTimeout(() => setResendStatus("idle"), 5000);
+      await api.post('/auth/resend-verification')
+      setResendStatus('success')
+      setTimeout(() => setResendStatus('idle'), 5000)
     } catch {
-      setResendStatus("error");
-      setTimeout(() => setResendStatus("idle"), 5000);
+      setResendStatus('error')
+      setTimeout(() => setResendStatus('idle'), 5000)
     } finally {
-      setIsResending(false);
+      setIsResending(false)
     }
-  };
+  }
 
   return (
     <nav className="sticky top-0 left-0 right-0 z-50 flex flex-col bg-background/90 backdrop-blur-md border-b border-border">
@@ -45,10 +57,13 @@ export default function Navbar() {
         <div className="bg-red-500/10 border-b border-red-500/30 text-red-500 px-6 py-2.5 flex items-center justify-between font-['JetBrains_Mono'] text-xs">
           <div className="flex items-center gap-3">
             <AlertTriangle size={14} />
-            <span>Your profile is incomplete. You will need to complete it before joining a duel.</span>
+            <span>
+              Your profile is incomplete. You will need to complete it before
+              joining a duel.
+            </span>
           </div>
-          <button 
-            onClick={() => navigate("/profile/edit")}
+          <button
+            onClick={() => navigate('/profile/edit')}
             className="font-bold underline hover:no-underline flex items-center gap-1 shrink-0"
           >
             Complete Profile
@@ -63,12 +78,22 @@ export default function Navbar() {
             <AlertTriangle size={14} />
             <span>Please check your inbox to verify your email address.</span>
           </div>
-          <button 
+          <button
             onClick={handleResendVerification}
-            disabled={isResending || resendStatus === "success"}
-            className={`font-bold flex items-center gap-1 shrink-0 ${resendStatus === "success" ? "text-emerald-500" : resendStatus === "error" ? "text-destructive" : "underline hover:no-underline"}`}
+            disabled={isResending || resendStatus === 'success'}
+            className={`font-bold flex items-center gap-1 shrink-0 ${resendStatus === 'success' ? 'text-emerald-500' : resendStatus === 'error' ? 'text-destructive' : 'underline hover:no-underline'}`}
           >
-            {isResending ? "Sending..." : resendStatus === "success" ? "Sent!" : resendStatus === "error" ? "Failed!" : <>Resend <Send size={12} /></>}
+            {isResending ? (
+              'Sending...'
+            ) : resendStatus === 'success' ? (
+              'Sent!'
+            ) : resendStatus === 'error' ? (
+              'Failed!'
+            ) : (
+              <>
+                Resend <Send size={12} />
+              </>
+            )}
           </button>
         </div>
       )}
@@ -82,17 +107,33 @@ export default function Navbar() {
           </span>
         </NavLink>
 
-        {/* Middle: Home Icon */}
-        <div className="flex items-center">
+        {/* Middle: Navigation Icons */}
+        <div className="flex items-center gap-2">
           <NavLink
             to="/"
             className={({ isActive }) =>
               `flex items-center gap-2 transition-colors px-4 py-2 rounded-full ${
-                isActive ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-foreground"
+                isActive
+                  ? 'text-accent bg-accent/10'
+                  : 'text-muted-foreground hover:text-foreground'
               }`
             }
+            title="Home"
           >
             <Home size={18} />
+          </NavLink>
+          <NavLink
+            to="/leaderboard"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors px-4 py-2 rounded-full ${
+                isActive
+                  ? 'text-accent bg-accent/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`
+            }
+            title="Leaderboard"
+          >
+            <Trophy size={18} />
           </NavLink>
         </div>
 
@@ -109,23 +150,31 @@ export default function Navbar() {
           {menuOpen && (
             <>
               {/* Invisible overlay to close dropdown when clicking outside */}
-              <div 
-                className="fixed inset-0 z-40 cursor-default" 
+              <div
+                className="fixed inset-0 z-40 cursor-default"
                 onClick={() => setMenuOpen(false)}
               ></div>
-              
+
               <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-2xl z-50 py-1">
                 <button
-                  onClick={() => { setMenuOpen(false); navigate("/settings"); }}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate('/settings')
+                  }}
                   className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/80 flex items-center gap-3 font-['JetBrains_Mono'] transition-colors"
                 >
-                  <Settings size={14} className="text-muted-foreground" /> Settings
+                  <Settings size={14} className="text-muted-foreground" />{' '}
+                  Settings
                 </button>
                 <button
-                  onClick={() => { setMenuOpen(false); navigate("/profile/edit"); }}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate('/profile/edit')
+                  }}
                   className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/80 flex items-center gap-3 font-['JetBrains_Mono'] transition-colors"
                 >
-                  <Edit3 size={14} className="text-muted-foreground" /> Edit Profile
+                  <Edit3 size={14} className="text-muted-foreground" /> Edit
+                  Profile
                 </button>
                 <div className="border-t border-border my-1"></div>
                 <button
@@ -140,5 +189,5 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
-  );
+  )
 }

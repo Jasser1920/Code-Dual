@@ -9,7 +9,11 @@
   "scripts": {
     "prepare": "husky",
     "lint": "npm run lint --workspaces --if-present",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev": "npm run dev --workspaces --if-present",
+    "db:push": "npm run db:push -w server",
+    "db:seed": "npm run db:seed -w server",
+    "setup": "npm install && npm --prefix server run build || echo 'Build skip' && cd server && npx prisma generate && npx prisma db push && npx prisma db seed"
   },
   "devDependencies": {
     "husky": "^9.1.7",

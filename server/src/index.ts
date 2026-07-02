@@ -10,6 +10,9 @@ import type { UserProfile, DuelStatus } from '@code-dual/shared'
 import authPlugin from './plugins/auth.js'
 import authRoutes from './routes/auth.js'
 import profileRoutes from './routes/profile.js'
+import executeRoutes from './routes/execute.js'
+import usersRoutes from './routes/users.js'
+import { setupSocket } from './socket.js'
 
 dotenv.config()
 
@@ -42,11 +45,16 @@ await app.register(authPlugin)
 // Register routes
 app.register(authRoutes, { prefix: '/auth' })
 app.register(profileRoutes, { prefix: '/profile' })
+app.register(executeRoutes, { prefix: '/execute' })
+app.register(usersRoutes, { prefix: '/users' })
 
 // Health check route
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() }
 })
+
+// Setup Socket.io
+setupSocket(app)
 
 // Start server
 const start = async () => {

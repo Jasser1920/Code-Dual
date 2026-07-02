@@ -1,7 +1,25 @@
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Clock, Trophy, Users, Code2, Zap, Shield, GitBranch, Star, ChevronRight, AlertTriangle } from "lucide-react";
-import { LIVE_DUELS, LEADERBOARD, PROBLEMS, STATS_GLOBAL, DIFF_COLORS } from "../data/mock";
-import { useAuthStore } from "../store/useAuthStore";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ArrowRight,
+  Clock,
+  Trophy,
+  Users,
+  Code2,
+  Zap,
+  Shield,
+  GitBranch,
+  Star,
+  ChevronRight,
+  AlertTriangle,
+  X,
+  Loader2,
+  Link as LinkIcon,
+} from 'lucide-react'
+import { LIVE_DUELS, PROBLEMS, STATS_GLOBAL, DIFF_COLORS } from '../data/mock'
+import { useAuthStore } from '../store/useAuthStore'
+import { useSocketStore } from '../lib/socket'
+import axios from 'axios'
 
 function DuelMockup() {
   return (
@@ -9,7 +27,9 @@ function DuelMockup() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/50">
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">LIVE DUEL #4821</span>
+          <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
+            LIVE DUEL #4821
+          </span>
         </div>
         <div className="flex items-center gap-2 font-['JetBrains_Mono'] text-xs text-muted-foreground">
           <Clock size={12} />
@@ -19,99 +39,293 @@ function DuelMockup() {
       <div className="grid grid-cols-2 border-b border-border">
         <div className="px-4 py-3 border-r border-border">
           <div className="flex items-center justify-between">
-            <span className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">r3cursion</span>
-            <span className="font-['JetBrains_Mono'] text-xs text-accent">2847</span>
+            <span className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
+              r3cursion
+            </span>
+            <span className="font-['JetBrains_Mono'] text-xs text-accent">
+              2847
+            </span>
           </div>
           <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-            <div className="h-full bg-accent rounded-full" style={{ width: "72%" }} />
+            <div
+              className="h-full bg-accent rounded-full"
+              style={{ width: '72%' }}
+            />
           </div>
         </div>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">nullptr</span>
-            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">2741</span>
+            <span className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
+              nullptr
+            </span>
+            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
+              2741
+            </span>
           </div>
           <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-            <div className="h-full bg-muted-foreground/40 rounded-full" style={{ width: "58%" }} />
+            <div
+              className="h-full bg-muted-foreground/40 rounded-full"
+              style={{ width: '58%' }}
+            />
           </div>
         </div>
       </div>
       <div className="grid grid-cols-2">
         {[
-          { code: `def solve(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        diff = target - n\n        if diff in seen:\n            return [seen[diff], i]\n        seen[n] = i`, active: true },
-          { code: `fn solve(nums: Vec<i32>,\n         target: i32) -> Vec<i32> {\n    let mut map = HashMap::new();\n    for (i, &n) in nums.iter()\n                       .enumerate() {`, active: false },
+          {
+            code: `def solve(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        diff = target - n\n        if diff in seen:\n            return [seen[diff], i]\n        seen[n] = i`,
+            active: true,
+          },
+          {
+            code: `fn solve(nums: Vec<i32>,\n         target: i32) -> Vec<i32> {\n    let mut map = HashMap::new();\n    for (i, &n) in nums.iter()\n                       .enumerate() {`,
+            active: false,
+          },
         ].map((editor, idx) => (
-          <div key={idx} className={`p-4 font-['JetBrains_Mono'] text-xs leading-relaxed border-r border-border last:border-r-0 ${editor.active ? "bg-card" : "bg-secondary/30"}`}>
-            <pre className="text-foreground/70 whitespace-pre-wrap">{editor.code}</pre>
-            {editor.active && <span className="inline-block w-0.5 h-3 bg-accent animate-pulse ml-0.5 align-middle" />}
+          <div
+            key={idx}
+            className={`p-4 font-['JetBrains_Mono'] text-xs leading-relaxed border-r border-border last:border-r-0 ${editor.active ? 'bg-card' : 'bg-secondary/30'}`}
+          >
+            <pre className="text-foreground/70 whitespace-pre-wrap">
+              {editor.code}
+            </pre>
+            {editor.active && (
+              <span className="inline-block w-0.5 h-3 bg-accent animate-pulse ml-0.5 align-middle" />
+            )}
           </div>
         ))}
       </div>
       <div className="px-4 py-2 border-t border-border bg-secondary/50 flex items-center justify-between">
-        <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">Two Sum · Easy</span>
-        <span className="font-['JetBrains_Mono'] text-xs text-accent">Tests: 7/10</span>
+        <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
+          Two Sum · Easy
+        </span>
+        <span className="font-['JetBrains_Mono'] text-xs text-accent">
+          Tests: 7/10
+        </span>
       </div>
     </div>
-  );
+  )
 }
 
 export default function Home() {
-  const navigate = useNavigate();
-  const { isProfileComplete, isAuthenticated, user } = useAuthStore();
+  const navigate = useNavigate()
+  const { isProfileComplete, isAuthenticated, user } = useAuthStore()
+  const { socket, connect } = useSocketStore()
+  const [showBlockModal, setShowBlockModal] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [topPlayers, setTopPlayers] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchTopPlayers = async () => {
+      try {
+        const response = await axios.get(
+          'http://localhost:4000/users/leaderboard'
+        )
+        setTopPlayers(response.data.slice(0, 8))
+      } catch (err) {
+        console.error('Failed to fetch top players', err)
+      }
+    }
+    fetchTopPlayers()
+  }, [])
+
+  useEffect(() => {
+    if (!socket) return
+
+    const handleMatchFound = (data: { roomId: string }) => {
+      setIsSearching(false)
+      navigate(`/duel/${data.roomId}`)
+    }
+
+    const handlePrivateRoomCreated = (data: { roomId: string }) => {
+      navigate(`/duel/${data.roomId}`)
+    }
+
+    socket.on('match_found', handleMatchFound)
+    socket.on('private_room_created', handlePrivateRoomCreated)
+
+    return () => {
+      socket.off('match_found', handleMatchFound)
+      socket.off('private_room_created', handlePrivateRoomCreated)
+    }
+  }, [socket, navigate])
+
+  const handlePlayClick = () => {
+    if (!isAuthenticated) {
+      return navigate('/login')
+    }
+    if (!user?.emailVerified || !isProfileComplete()) {
+      setShowBlockModal(true)
+      return
+    }
+
+    // Start matchmaking
+    setIsSearching(true)
+    connect()
+    // We use a small timeout to ensure socket connects before emitting, or we can emit immediately if connected.
+    // useSocketStore's connect is synchronous in returning, but actual connection is async.
+    // It's safer to emit after connect. But socket.io buffers emissions!
+    setTimeout(() => {
+      const currentSocket = useSocketStore.getState().socket
+      currentSocket?.emit('join_queue', { userId: user.id })
+    }, 100)
+  }
+
+  const handlePlayWithFriend = () => {
+    if (!isAuthenticated) {
+      return navigate('/login')
+    }
+    if (!user?.emailVerified || !isProfileComplete()) {
+      setShowBlockModal(true)
+      return
+    }
+
+    connect()
+    setTimeout(() => {
+      const currentSocket = useSocketStore.getState().socket
+      currentSocket?.emit('create_private_room', { userId: user.id })
+    }, 100)
+  }
+
+  const handleCancelSearch = () => {
+    setIsSearching(false)
+    socket?.emit('leave_queue')
+  }
 
   const features = [
-    { icon: <Zap size={18} />, title: "Sub-100ms Judging", desc: "Our execution engine compiles and runs your code against all test cases in under 100 milliseconds on average." },
-    { icon: <Shield size={18} />, title: "Anti-Cheat Engine", desc: "Behavioral analysis, identical-test detection, and submission timing algorithms keep duels fair." },
-    { icon: <GitBranch size={18} />, title: "12 Languages", desc: "Python, C++, Rust, Go, Java, TypeScript, C, Ruby, Kotlin, Swift, Scala, Haskell — all first-class." },
-    { icon: <Star size={18} />, title: "ELO Rating System", desc: "A calibrated rating system modeled on competitive chess ensures every match is meaningful." },
-    { icon: <Trophy size={18} />, title: "Weekly Tournaments", desc: "Open and invite-only brackets with cash prizes and sponsor perks every Sunday." },
-    { icon: <Code2 size={18} />, title: "Replay & Analysis", desc: "Replay any duel keystroke-by-keystroke. See where you lost time and study opponents' approaches." },
-  ];
+    {
+      icon: <Zap size={18} />,
+      title: 'Sub-100ms Judging',
+      desc: 'Our execution engine compiles and runs your code against all test cases in under 100 milliseconds on average.',
+    },
+    {
+      icon: <Shield size={18} />,
+      title: 'Anti-Cheat Engine',
+      desc: 'Behavioral analysis, identical-test detection, and submission timing algorithms keep duels fair.',
+    },
+    {
+      icon: <GitBranch size={18} />,
+      title: '12 Languages',
+      desc: 'Python, C++, Rust, Go, Java, TypeScript, C, Ruby, Kotlin, Swift, Scala, Haskell — all first-class.',
+    },
+    {
+      icon: <Star size={18} />,
+      title: 'ELO Rating System',
+      desc: 'A calibrated rating system modeled on competitive chess ensures every match is meaningful.',
+    },
+    {
+      icon: <Trophy size={18} />,
+      title: 'Weekly Tournaments',
+      desc: 'Open and invite-only brackets with cash prizes and sponsor perks every Sunday.',
+    },
+    {
+      icon: <Code2 size={18} />,
+      title: 'Replay & Analysis',
+      desc: "Replay any duel keystroke-by-keystroke. See where you lost time and study opponents' approaches.",
+    },
+  ]
 
   const steps = [
-    { num: "01", icon: <Users size={20} />, title: "Matchmake", desc: "Queue by rating or challenge a friend directly. The system pairs you with a rival at your skill level in seconds." },
-    { num: "02", icon: <Code2 size={20} />, title: "Code", desc: "Both coders get the same problem simultaneously. Write your solution in any supported language inside the live editor." },
-    { num: "03", icon: <Zap size={20} />, title: "Submit", desc: "Pass all test cases before your opponent does. Speed and correctness both matter — first clean solution wins." },
-    { num: "04", icon: <Trophy size={20} />, title: "Rank Up", desc: "Your ELO rating updates instantly. Climb the global leaderboard, earn titles, and unlock tournament invitations." },
-  ];
+    {
+      num: '01',
+      icon: <Users size={20} />,
+      title: 'Matchmake',
+      desc: 'Queue by rating or challenge a friend directly. The system pairs you with a rival at your skill level in seconds.',
+    },
+    {
+      num: '02',
+      icon: <Code2 size={20} />,
+      title: 'Code',
+      desc: 'Both coders get the same problem simultaneously. Write your solution in any supported language inside the live editor.',
+    },
+    {
+      num: '03',
+      icon: <Zap size={20} />,
+      title: 'Submit',
+      desc: 'Pass all test cases before your opponent does. Speed and correctness both matter — first clean solution wins.',
+    },
+    {
+      num: '04',
+      icon: <Trophy size={20} />,
+      title: 'Rank Up',
+      desc: 'Your ELO rating updates instantly. Climb the global leaderboard, earn titles, and unlock tournament invitations.',
+    },
+  ]
 
   return (
     <div>
       {/* Hero */}
       <section className="relative min-h-[calc(100vh-3.5rem)] flex flex-col justify-center overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-[0.06]" style={{ background: "radial-gradient(ellipse, #5b4ff0 0%, transparent 70%)" }} />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-[0.06]"
+          style={{
+            background: 'radial-gradient(ellipse, #5b4ff0 0%, transparent 70%)',
+          }}
+        />
         <div className="relative max-w-7xl mx-auto px-6 w-full py-20">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <div className="flex items-center gap-2 mb-6">
                 <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">{LIVE_DUELS.length} duels live now</span>
+                <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+                  {LIVE_DUELS.length} duels live now
+                </span>
               </div>
               <h1 className="font-['Barlow_Condensed'] font-extrabold text-6xl lg:text-8xl leading-none tracking-tight text-foreground mb-4 uppercase">
-                Code.<br /><span className="text-accent">Battle.</span><br />Win.
+                Code.
+                <br />
+                <span className="text-accent">Battle.</span>
+                <br />
+                Win.
               </h1>
               <p className="font-['Barlow'] text-muted-foreground text-lg leading-relaxed max-w-md mb-8">
-                Real-time 1v1 coding duels. Pick a problem, match against a rival, and prove you're the faster engineer. Rated, ranked, and ruthless.
+                Real-time 1v1 coding duels. Pick a problem, match against a
+                rival, and prove you're the faster engineer. Rated, ranked, and
+                ruthless.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <button onClick={() => navigate("/duels")} className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-6 py-3 flex items-center gap-2 hover:bg-accent/90 transition-colors">
+                <button
+                  onClick={handlePlayClick}
+                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-6 py-3 flex items-center gap-2 hover:bg-accent/90 transition-colors"
+                >
                   Find a Duel <ArrowRight size={16} />
                 </button>
-                <button onClick={() => navigate("/leaderboard")} className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm border border-border text-muted-foreground px-6 py-3 hover:text-foreground hover:border-foreground/20 transition-colors">
+                <button
+                  onClick={handlePlayWithFriend}
+                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm border border-accent text-accent px-6 py-3 flex items-center gap-2 hover:bg-accent/10 transition-colors"
+                >
+                  Play with a Friend <LinkIcon size={16} />
+                </button>
+                <button
+                  onClick={() => navigate('/leaderboard')}
+                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm border border-border text-muted-foreground px-6 py-3 hover:text-foreground hover:border-foreground/20 transition-colors"
+                >
                   Watch Live
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-6 mt-12 pt-12 border-t border-border">
                 {STATS_GLOBAL.map((s) => (
                   <div key={s.label}>
-                    <div className="font-['Barlow_Condensed'] font-extrabold text-2xl text-foreground">{s.value}</div>
-                    <div className="font-['Barlow'] text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                    <div className="font-['Barlow_Condensed'] font-extrabold text-2xl text-foreground">
+                      {s.value}
+                    </div>
+                    <div className="font-['Barlow'] text-xs text-muted-foreground mt-0.5">
+                      {s.label}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="hidden lg:block"><DuelMockup /></div>
+            <div className="hidden lg:block">
+              <DuelMockup />
+            </div>
           </div>
         </div>
       </section>
@@ -122,35 +336,60 @@ export default function Home() {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-xl">Live Duels</h2>
+              <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-xl">
+                Live Duels
+              </h2>
             </div>
-            <button onClick={() => navigate("/duels")} className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+            <button
+              onClick={handlePlayClick}
+              className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
               View all <ChevronRight size={14} />
             </button>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {LIVE_DUELS.slice(0, 4).map((duel) => (
-              <div key={duel.id} className="border border-border bg-card hover:border-accent/30 transition-colors cursor-pointer p-4" onClick={() => navigate(`/duel/${duel.id}`)}>
+              <div
+                key={duel.id}
+                className="border border-border bg-card hover:border-accent/30 transition-colors cursor-pointer p-4"
+                onClick={() => navigate(`/duel/${duel.id}`)}
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">{duel.lang}</span>
+                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
+                    {duel.lang}
+                  </span>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Clock size={11} />
-                    <span className="font-['JetBrains_Mono'] text-xs">{duel.elapsed}</span>
+                    <span className="font-['JetBrains_Mono'] text-xs">
+                      {duel.elapsed}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">{duel.p1}</div>
-                    <div className="font-['JetBrains_Mono'] text-xs text-accent">{duel.p1rating}</div>
+                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
+                      {duel.p1}
+                    </div>
+                    <div className="font-['JetBrains_Mono'] text-xs text-accent">
+                      {duel.p1rating}
+                    </div>
                   </div>
-                  <span className="font-['Barlow_Condensed'] text-xs font-bold text-muted-foreground/50 uppercase tracking-widest">vs</span>
+                  <span className="font-['Barlow_Condensed'] text-xs font-bold text-muted-foreground/50 uppercase tracking-widest">
+                    vs
+                  </span>
                   <div className="text-right">
-                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">{duel.p2}</div>
-                    <div className="font-['JetBrains_Mono'] text-xs text-muted-foreground">{duel.p2rating}</div>
+                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
+                      {duel.p2}
+                    </div>
+                    <div className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
+                      {duel.p2rating}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-border">
-                  <span className="font-['Barlow'] text-xs text-muted-foreground">{duel.prob}</span>
+                  <span className="font-['Barlow'] text-xs text-muted-foreground">
+                    {duel.prob}
+                  </span>
                 </div>
               </div>
             ))}
@@ -162,16 +401,28 @@ export default function Home() {
       <section className="py-20 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
-            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">How it works</span>
-            <h2 className="font-['Barlow_Condensed'] font-extrabold text-4xl uppercase text-foreground mt-2">Four steps.<br />Zero excuses.</h2>
+            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+              How it works
+            </span>
+            <h2 className="font-['Barlow_Condensed'] font-extrabold text-4xl uppercase text-foreground mt-2">
+              Four steps.
+              <br />
+              Zero excuses.
+            </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
             {steps.map((step) => (
               <div key={step.num} className="bg-background p-8">
-                <div className="font-['JetBrains_Mono'] text-xs text-accent mb-6">{step.num}</div>
+                <div className="font-['JetBrains_Mono'] text-xs text-accent mb-6">
+                  {step.num}
+                </div>
                 <div className="text-foreground mb-4">{step.icon}</div>
-                <h3 className="font-['Barlow_Condensed'] font-bold uppercase text-xl text-foreground mb-3 tracking-wide">{step.title}</h3>
-                <p className="font-['Barlow'] text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                <h3 className="font-['Barlow_Condensed'] font-bold uppercase text-xl text-foreground mb-3 tracking-wide">
+                  {step.title}
+                </h3>
+                <p className="font-['Barlow'] text-sm text-muted-foreground leading-relaxed">
+                  {step.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -185,30 +436,67 @@ export default function Home() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">Global</span>
-                  <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase text-foreground mt-1">Leaderboard</h2>
+                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+                    Global
+                  </span>
+                  <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase text-foreground mt-1">
+                    Leaderboard
+                  </h2>
                 </div>
-                <button onClick={() => navigate("/leaderboard")} className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                <button
+                  onClick={() => navigate('/leaderboard')}
+                  className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
                   Full rankings <ChevronRight size={14} />
                 </button>
               </div>
               <div className="border border-border overflow-hidden">
                 <div className="grid grid-cols-[2rem_1fr_auto_auto] gap-4 px-4 py-2 border-b border-border bg-secondary/50">
-                  {["#", "Player", "Rating", "Streak"].map((h) => (
-                    <span key={h} className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest">{h}</span>
+                  {['#', 'Player', 'Rating', 'Streak'].map((h) => (
+                    <span
+                      key={h}
+                      className="font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest"
+                    >
+                      {h}
+                    </span>
                   ))}
                 </div>
-                {LEADERBOARD.slice(0, 8).map((player, idx) => (
-                  <div key={player.rank} className={`grid grid-cols-[2rem_1fr_auto_auto] gap-4 px-4 py-3 items-center border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer ${idx === 0 ? "bg-accent/5" : ""}`} onClick={() => navigate(`/profile/${player.name}`)}>
-                    <span className={`font-['JetBrains_Mono'] text-sm ${idx < 3 ? "text-accent" : "text-muted-foreground"}`}>{player.rank}</span>
+                {topPlayers.map((player, idx) => (
+                  <div
+                    key={player.rank}
+                    className={`grid grid-cols-[2rem_1fr_auto_auto] gap-4 px-4 py-3 items-center border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer ${idx === 0 ? 'bg-accent/5' : ''}`}
+                    onClick={() => navigate(`/profile/${player.name}`)}
+                  >
+                    <span
+                      className={`font-['JetBrains_Mono'] text-sm ${idx < 3 ? 'text-accent' : 'text-muted-foreground'}`}
+                    >
+                      {player.rank}
+                    </span>
                     <div>
-                      <span className="font-['JetBrains_Mono'] text-sm text-foreground">{player.name}</span>
-                      <span className="font-['Barlow'] text-xs text-muted-foreground ml-2">{player.lang}</span>
+                      <span className="font-['JetBrains_Mono'] text-sm text-foreground">
+                        {player.name}
+                      </span>
+                      <span className="font-['Barlow'] text-xs text-muted-foreground ml-2">
+                        {player.lang}
+                      </span>
                     </div>
-                    <span className="font-['JetBrains_Mono'] text-sm text-foreground">{player.rating}</span>
+                    <span className="font-['JetBrains_Mono'] text-sm text-foreground">
+                      {player.rating}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <Zap size={11} className={player.streak > 0 ? "text-accent" : "text-muted-foreground/30"} />
-                      <span className={`font-['JetBrains_Mono'] text-xs ${player.streak > 0 ? "text-accent" : "text-muted-foreground/30"}`}>{player.streak}</span>
+                      <Zap
+                        size={11}
+                        className={
+                          player.streak > 0
+                            ? 'text-accent'
+                            : 'text-muted-foreground/30'
+                        }
+                      />
+                      <span
+                        className={`font-['JetBrains_Mono'] text-xs ${player.streak > 0 ? 'text-accent' : 'text-muted-foreground/30'}`}
+                      >
+                        {player.streak}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -217,27 +505,51 @@ export default function Home() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">Practice</span>
-                  <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase text-foreground mt-1">Problem Set</h2>
+                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+                    Practice
+                  </span>
+                  <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase text-foreground mt-1">
+                    Problem Set
+                  </h2>
                 </div>
-                <button onClick={() => navigate("/problems")} className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                <button
+                  onClick={() => navigate('/problems')}
+                  className="font-['Barlow'] text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
                   All 340 <ChevronRight size={14} />
                 </button>
               </div>
               <div className="border border-border overflow-hidden">
                 {PROBLEMS.slice(0, 6).map((prob) => (
-                  <div key={prob.id} className="flex items-center justify-between px-4 py-3.5 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer group" onClick={() => navigate(`/problems/${prob.id}`)}>
+                  <div
+                    key={prob.id}
+                    className="flex items-center justify-between px-4 py-3.5 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer group"
+                    onClick={() => navigate(`/problems/${prob.id}`)}
+                  >
                     <div className="flex-1 min-w-0">
-                      <div className="font-['Barlow'] text-sm text-foreground group-hover:text-accent transition-colors truncate">{prob.title}</div>
+                      <div className="font-['Barlow'] text-sm text-foreground group-hover:text-accent transition-colors truncate">
+                        {prob.title}
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         {prob.tags.map((tag) => (
-                          <span key={tag} className="font-['JetBrains_Mono'] text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5">{tag}</span>
+                          <span
+                            key={tag}
+                            className="font-['JetBrains_Mono'] text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5"
+                          >
+                            {tag}
+                          </span>
                         ))}
                       </div>
                     </div>
                     <div className="flex items-center gap-4 ml-4 shrink-0">
-                      <span className={`font-['JetBrains_Mono'] text-xs ${DIFF_COLORS[prob.diff]}`}>{prob.diff}</span>
-                      <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground hidden sm:block">{prob.solves.toLocaleString()}</span>
+                      <span
+                        className={`font-['JetBrains_Mono'] text-xs ${DIFF_COLORS[prob.diff]}`}
+                      >
+                        {prob.diff}
+                      </span>
+                      <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground hidden sm:block">
+                        {prob.solves.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -251,15 +563,26 @@ export default function Home() {
       <section className="py-20 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
-            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">Platform</span>
-            <h2 className="font-['Barlow_Condensed'] font-extrabold text-4xl uppercase text-foreground mt-2">Built for competitors</h2>
+            <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+              Platform
+            </span>
+            <h2 className="font-['Barlow_Condensed'] font-extrabold text-4xl uppercase text-foreground mt-2">
+              Built for competitors
+            </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
             {features.map((f) => (
-              <div key={f.title} className="bg-background p-8 hover:bg-secondary/20 transition-colors">
+              <div
+                key={f.title}
+                className="bg-background p-8 hover:bg-secondary/20 transition-colors"
+              >
                 <div className="text-accent mb-4">{f.icon}</div>
-                <h3 className="font-['Barlow_Condensed'] font-bold uppercase text-lg text-foreground mb-2 tracking-wide">{f.title}</h3>
-                <p className="font-['Barlow'] text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                <h3 className="font-['Barlow_Condensed'] font-bold uppercase text-lg text-foreground mb-2 tracking-wide">
+                  {f.title}
+                </h3>
+                <p className="font-['Barlow'] text-sm text-muted-foreground leading-relaxed">
+                  {f.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -269,18 +592,91 @@ export default function Home() {
       {/* CTA */}
       <section className="py-24 border-t border-border">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">Ready?</span>
+          <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+            Ready?
+          </span>
           <h2 className="font-['Barlow_Condensed'] font-extrabold text-6xl lg:text-8xl uppercase text-foreground mt-4 mb-4 leading-none">
-            Enter the<br /><span className="text-accent">Arena.</span>
+            Enter the
+            <br />
+            <span className="text-accent">Arena.</span>
           </h2>
           <p className="font-['Barlow'] text-muted-foreground text-lg max-w-md mx-auto mb-10">
-            Free to play. No setup. Just you, your editor, and an opponent waiting to be beaten.
+            Free to play. No setup. Just you, your editor, and an opponent
+            waiting to be beaten.
           </p>
-          <button onClick={() => navigate("/register")} className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-8 py-4 flex items-center gap-2 mx-auto hover:bg-accent/90 transition-colors">
+          <button
+            onClick={() => navigate('/register')}
+            className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-8 py-4 flex items-center gap-2 mx-auto hover:bg-accent/90 transition-colors"
+          >
             Create free account <ArrowRight size={16} />
           </button>
         </div>
       </section>
+
+      {/* Matchmaking Overlay */}
+      {isSearching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-md">
+          <div className="flex flex-col items-center text-center">
+            <Loader2 size={48} className="text-accent animate-spin mb-6" />
+            <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase tracking-widest text-foreground mb-2">
+              Searching for Opponent...
+            </h2>
+            <p className="font-['Barlow'] text-sm text-muted-foreground mb-8">
+              Waiting for another player to join the queue.
+            </p>
+            <button
+              onClick={handleCancelSearch}
+              className="border border-border text-muted-foreground hover:text-foreground font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm px-8 py-3 transition-colors"
+            >
+              Cancel Search
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Duel Block Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-md border border-destructive/30 bg-card p-6 shadow-2xl rounded-sm">
+            <button
+              onClick={() => setShowBlockModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <AlertTriangle size={24} className="text-destructive" />
+              </div>
+              <h2 className="font-['Barlow_Condensed'] font-extrabold text-2xl uppercase tracking-widest text-foreground mb-2">
+                Access Denied
+              </h2>
+              <p className="font-['Barlow'] text-sm text-muted-foreground leading-relaxed mb-6">
+                You must verify your email and complete your profile information
+                to enter the Code-Dual Arena. We need to ensure a fair
+                matchmaking environment.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowBlockModal(false)}
+                  className="flex-1 border border-border text-foreground font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm py-3 hover:bg-secondary/50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBlockModal(false)
+                    navigate('/profile/edit')
+                  }}
+                  className="flex-1 bg-accent text-accent-foreground font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm py-3 hover:bg-accent/90 transition-colors"
+                >
+                  Verify Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }

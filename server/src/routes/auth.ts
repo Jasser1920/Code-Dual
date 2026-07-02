@@ -2,7 +2,10 @@ import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { prisma } from '../db.js'
-import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailer.js'
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} from '../utils/mailer.js'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const CLIENT_ID = process.env.GITHUB_CLIENT_ID
@@ -10,7 +13,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000'
 
   // Rate limiting config for auth routes
-  const rateLimitConfig = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }
+  const rateLimitConfig = {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }
 
   // 1. GitHub OAuth Redirect
   fastify.get('/login/github', rateLimitConfig, async (request, reply) => {
@@ -27,18 +32,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       // Exchange code for token
-      const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-          code
-        })
-      })
+      const tokenRes = await fetch(
+        'https://github.com/login/oauth/access_token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+            code,
+          }),
+        }
+      )
       const tokenData = await tokenRes.json()
       if (tokenData.error) {
         throw new Error(tokenData.error_description)
@@ -48,39 +56,49 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Fetch user profile from GitHub
       const userRes = await fetch('https://api.github.com/user', {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       const githubUser = await userRes.json()
 
       // Fetch user emails
       const emailsRes = await fetch('https://api.github.com/user/emails', {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       const githubEmails = await emailsRes.json()
-      const primaryEmail = githubEmails.find((e: any) => e.primary)?.email || githubEmails[0]?.email
+      const primaryEmail =
+        githubEmails.find((e: any) => e.primary)?.email ||
+        githubEmails[0]?.email
 
       // Upsert User in Database
       const user = await prisma.user.upsert({
         where: { githubId: String(githubUser.id) },
         update: {
           username: githubUser.login,
-          email: primaryEmail
+          email: primaryEmail,
+          emailVerified: true,
         },
         create: {
           githubId: String(githubUser.id),
           username: githubUser.login,
           email: primaryEmail,
+          emailVerified: true,
           elo: 1000,
           rankTier: 'Bronze',
-          preferredLang: 'javascript'
-        }
+          preferredLang: 'javascript',
+        },
       })
 
       // Generate JWT Access Token
-      const jwtToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '15m' })
-      
+      const jwtToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '15m' }
+      )
+
       // Generate Refresh Token
-      const refreshToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '7d' })
+      const refreshToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '7d' }
+      )
 
       // Set Refresh Token as HTTP-only Cookie
       reply.setCookie('refreshToken', refreshToken, {
@@ -99,18 +117,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // 3. Normal Registration
   fastify.post('/register', rateLimitConfig, async (request, reply) => {
-    const { email, username, password, primaryLanguage, skillLevel } = request.body as any
+    const { email, username, password, primaryLanguage, skillLevel } =
+      request.body as any
     if (!email || !username || !password) {
       return reply.status(400).send({ error: 'Missing required fields' })
     }
 
     try {
       const existingUser = await prisma.user.findFirst({
-        where: { OR: [{ email }, { username }] }
+        where: { OR: [{ email }, { username }] },
       })
 
       if (existingUser) {
-        return reply.status(409).send({ error: 'Email or username already in use' })
+        return reply
+          .status(409)
+          .send({ error: 'Email or username already in use' })
       }
 
       const passwordHash = await bcrypt.hash(password, 10)
@@ -131,15 +152,23 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           rankTier: 'Bronze',
           preferredLang: primaryLanguage || 'javascript',
           verificationToken,
-          verificationExpires
-        }
+          verificationExpires,
+        },
       })
 
       // Fire and forget email sending
-      sendVerificationEmail(user.email, user.username, verificationToken).catch(err => request.log.error('Failed to send verification email:', err))
+      sendVerificationEmail(user.email, user.username, verificationToken).catch(
+        (err) => request.log.error('Failed to send verification email:', err)
+      )
 
-      const jwtToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '15m' })
-      const refreshToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '7d' })
+      const jwtToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '15m' }
+      )
+      const refreshToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '7d' }
+      )
 
       reply.setCookie('refreshToken', refreshToken, {
         path: '/',
@@ -148,7 +177,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         maxAge: 7 * 24 * 60 * 60,
       })
 
-      return { accessToken: jwtToken, user: { id: user.id, username: user.username, email: user.email, elo: user.elo, rankTier: user.rankTier, location: user.location, mobileNumber: user.mobileNumber, avatarUrl: user.avatarUrl, preferredLang: user.preferredLang, emailVerified: user.emailVerified } }
+      return {
+        accessToken: jwtToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          elo: user.elo,
+          rankTier: user.rankTier,
+          location: user.location,
+          mobileNumber: user.mobileNumber,
+          avatarUrl: user.avatarUrl,
+          preferredLang: user.preferredLang,
+          emailVerified: user.emailVerified,
+        },
+      }
     } catch (error) {
       request.log.error(error)
       return reply.status(500).send({ error: 'Internal server error' })
@@ -166,12 +209,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       const user = await prisma.user.findFirst({
         where: {
           verificationToken: token,
-          verificationExpires: { gt: new Date() }
-        }
+          verificationExpires: { gt: new Date() },
+        },
       })
 
       if (!user) {
-        return reply.status(400).send({ error: 'Invalid or expired verification token' })
+        return reply
+          .status(400)
+          .send({ error: 'Invalid or expired verification token' })
       }
 
       await prisma.user.update({
@@ -179,8 +224,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           emailVerified: true,
           verificationToken: null,
-          verificationExpires: null
-        }
+          verificationExpires: null,
+        },
       })
 
       return { success: true, message: 'Email verified successfully' }
@@ -198,13 +243,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const user = await prisma.user.findFirst({ 
-        where: { 
-          OR: [
-            { email: email },
-            { username: email }
-          ] 
-        } 
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: email }, { username: email }],
+        },
       })
       if (!user || !user.passwordHash) {
         return reply.status(401).send({ error: 'Invalid email or password' })
@@ -215,8 +257,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(401).send({ error: 'Invalid email or password' })
       }
 
-      const jwtToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '15m' })
-      const refreshToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '7d' })
+      const jwtToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '15m' }
+      )
+      const refreshToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '7d' }
+      )
 
       reply.setCookie('refreshToken', refreshToken, {
         path: '/',
@@ -225,7 +273,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         maxAge: 7 * 24 * 60 * 60,
       })
 
-      return { accessToken: jwtToken, user: { id: user.id, username: user.username, email: user.email, elo: user.elo, rankTier: user.rankTier, location: user.location, mobileNumber: user.mobileNumber, avatarUrl: user.avatarUrl, preferredLang: user.preferredLang, emailVerified: user.emailVerified } }
+      return {
+        accessToken: jwtToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          elo: user.elo,
+          rankTier: user.rankTier,
+          location: user.location,
+          mobileNumber: user.mobileNumber,
+          avatarUrl: user.avatarUrl,
+          preferredLang: user.preferredLang,
+          emailVerified: user.emailVerified,
+        },
+      }
     } catch (error) {
       request.log.error(error)
       return reply.status(500).send({ error: 'Internal server error' })
@@ -241,14 +303,33 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const decoded = fastify.jwt.verify<{ userId: string }>(refreshToken)
-      const user = await prisma.user.findUnique({ where: { id: decoded.userId } })
-      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      })
+
       if (!user) {
         return reply.status(401).send({ error: 'User not found' })
       }
 
-      const jwtToken = fastify.jwt.sign({ userId: user.id, username: user.username }, { expiresIn: '15m' })
-      return { accessToken: jwtToken, user: { id: user.id, username: user.username, email: user.email, elo: user.elo, rankTier: user.rankTier, location: user.location, mobileNumber: user.mobileNumber, avatarUrl: user.avatarUrl, preferredLang: user.preferredLang, emailVerified: user.emailVerified } }
+      const jwtToken = fastify.jwt.sign(
+        { userId: user.id, username: user.username },
+        { expiresIn: '15m' }
+      )
+      return {
+        accessToken: jwtToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          elo: user.elo,
+          rankTier: user.rankTier,
+          location: user.location,
+          mobileNumber: user.mobileNumber,
+          avatarUrl: user.avatarUrl,
+          preferredLang: user.preferredLang,
+          emailVerified: user.emailVerified,
+        },
+      }
     } catch (err) {
       reply.clearCookie('refreshToken', { path: '/' })
       return reply.status(401).send({ error: 'Invalid refresh token' })
@@ -256,10 +337,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // 6. Logout
-  fastify.post('/logout', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    reply.clearCookie('refreshToken', { path: '/' })
-    return { success: true }
-  })
+  fastify.post(
+    '/logout',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      reply.clearCookie('refreshToken', { path: '/' })
+      return { success: true }
+    }
+  )
 
   // 7. Forgot Password
   fastify.post('/forgot-password', rateLimitConfig, async (request, reply) => {
@@ -268,20 +353,28 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const user = await prisma.user.findUnique({ where: { email } })
-      if (user && !user.githubId) { // Only send reset for native accounts
+      if (user && !user.githubId) {
+        // Only send reset for native accounts
         const resetPasswordToken = crypto.randomBytes(32).toString('hex')
         const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
 
         await prisma.user.update({
           where: { id: user.id },
-          data: { resetPasswordToken, resetPasswordExpires }
+          data: { resetPasswordToken, resetPasswordExpires },
         })
 
-        sendPasswordResetEmail(user.email, user.username, resetPasswordToken).catch(err => request.log.error('Failed to send reset email:', err))
+        sendPasswordResetEmail(
+          user.email,
+          user.username,
+          resetPasswordToken
+        ).catch((err) => request.log.error('Failed to send reset email:', err))
       }
-      
+
       // Always return success to prevent email enumeration
-      return { success: true, message: 'If that email exists, a reset link was sent.' }
+      return {
+        success: true,
+        message: 'If that email exists, a reset link was sent.',
+      }
     } catch (error) {
       request.log.error(error)
       return reply.status(500).send({ error: 'Internal server error' })
@@ -292,19 +385,23 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/reset-password', rateLimitConfig, async (request, reply) => {
     const { token, newPassword } = request.body as any
     if (!token || !newPassword) {
-      return reply.status(400).send({ error: 'Token and new password are required' })
+      return reply
+        .status(400)
+        .send({ error: 'Token and new password are required' })
     }
 
     try {
       const user = await prisma.user.findFirst({
         where: {
           resetPasswordToken: token,
-          resetPasswordExpires: { gt: new Date() }
-        }
+          resetPasswordExpires: { gt: new Date() },
+        },
       })
 
       if (!user) {
-        return reply.status(400).send({ error: 'Invalid or expired reset token' })
+        return reply
+          .status(400)
+          .send({ error: 'Invalid or expired reset token' })
       }
 
       const passwordHash = await bcrypt.hash(newPassword, 10)
@@ -314,8 +411,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           passwordHash,
           resetPasswordToken: null,
-          resetPasswordExpires: null
-        }
+          resetPasswordExpires: null,
+        },
       })
 
       return { success: true, message: 'Password has been reset successfully' }
@@ -326,31 +423,45 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   // 9. Resend Verification Email
-  fastify.post('/resend-verification', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = request.user.userId
+  fastify.post(
+    '/resend-verification',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = request.user.userId
 
-    try {
-      const user = await prisma.user.findUnique({ where: { id: userId } })
-      
-      if (!user) return reply.status(404).send({ error: 'User not found' })
-      if (user.emailVerified) return reply.status(400).send({ error: 'Email is already verified' })
+      try {
+        const user = await prisma.user.findUnique({ where: { id: userId } })
 
-      const verificationToken = crypto.randomBytes(32).toString('hex')
-      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000)
+        if (!user) return reply.status(404).send({ error: 'User not found' })
+        if (user.emailVerified)
+          return reply.status(400).send({ error: 'Email is already verified' })
 
-      await prisma.user.update({
-        where: { id: userId },
-        data: { verificationToken, verificationExpires }
-      })
+        const verificationToken = crypto.randomBytes(32).toString('hex')
+        const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-      sendVerificationEmail(user.email, user.username, verificationToken).catch(err => request.log.error('Failed to resend verification email:', err))
+        await prisma.user.update({
+          where: { id: userId },
+          data: { verificationToken, verificationExpires },
+        })
 
-      return { success: true, message: 'Verification email resent successfully' }
-    } catch (error) {
-      request.log.error(error)
-      return reply.status(500).send({ error: 'Internal server error' })
+        sendVerificationEmail(
+          user.email,
+          user.username,
+          verificationToken
+        ).catch((err) =>
+          request.log.error('Failed to resend verification email:', err)
+        )
+
+        return {
+          success: true,
+          message: 'Verification email resent successfully',
+        }
+      } catch (error) {
+        request.log.error(error)
+        return reply.status(500).send({ error: 'Internal server error' })
+      }
     }
-  })
+  )
 }
 
 export default authRoutes
