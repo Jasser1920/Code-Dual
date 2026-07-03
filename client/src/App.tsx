@@ -23,7 +23,7 @@ import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
 import DuelResult from './pages/DuelResult'
 import { Toaster } from 'sonner'
-
+import { Analytics } from '@vercel/analytics/react'
 function AppContent() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -99,6 +99,7 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" theme="dark" richColors />
       <AppContent />
+      <Analytics />
     </BrowserRouter>
   )
 }
