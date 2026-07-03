@@ -32,9 +32,8 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:4000/users/profile/${username}`
-        )
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+        const response = await axios.get(`${apiUrl}/users/profile/${username}`)
         setPlayer(response.data.profile)
         setRatingHistory(response.data.ratingHistory)
         setMatchHistory(response.data.matchHistory)
