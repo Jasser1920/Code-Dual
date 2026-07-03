@@ -16,7 +16,7 @@ import {
   Loader2,
   Link as LinkIcon,
 } from 'lucide-react'
-import { LIVE_DUELS, PROBLEMS, STATS_GLOBAL, DIFF_COLORS } from '../data/mock'
+import { LIVE_DUELS, STATS_GLOBAL } from '../data/mock'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
 import axios from 'axios'
