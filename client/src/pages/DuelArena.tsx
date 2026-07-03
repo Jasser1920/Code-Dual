@@ -10,6 +10,7 @@ import { RunPanel } from '../components/editor/RunPanel'
 import { ArrowLeft, Clock, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import { JUDGE0_LANGUAGE_IDS } from '../utils/judge0'
+import { toast } from 'sonner'
 
 // Mock Problem Data
 const MOCK_PROBLEM: Problem = {
@@ -53,12 +54,12 @@ export default function DuelArena() {
   const [code, setCode] = useState(DEFAULT_CODE['javascript'])
   const [isRunning, setIsRunning] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   const [opponentJoined, setOpponentJoined] = useState(false)
   const [opponentCode, setOpponentCode] = useState('')
 
   const [remainingTime, setRemainingTime] = useState(15 * 60)
-  const [opponentActivity, setOpponentActivity] = useState<string | null>(null)
 
   // Connect to room
   useEffect(() => {
@@ -86,12 +87,22 @@ export default function DuelArena() {
       setRemainingTime(remaining)
     })
 
-    socket.on('opponent_activity', (activity: string) => {
-      setOpponentActivity(activity)
-
-      // Clear typing activity after 2 seconds automatically
-      if (activity === 'Typing...') {
-        setTimeout(() => setOpponentActivity(null), 2000)
+    socket.on('opponent_activity', (activity: string | null) => {
+      if (activity) {
+        toast(
+          <div className="flex flex-col font-['JetBrains_Mono']">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+              Opponent Action
+            </span>
+            <span className="text-sm text-accent font-bold animate-pulse">
+              {activity}
+            </span>
+          </div>,
+          {
+            id: 'opponent-activity',
+            duration: activity === 'Typing...' ? 1500 : 4000,
+          }
+        )
       }
     })
 
@@ -145,15 +156,13 @@ export default function DuelArena() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  // Update code template when language changes if code is still default or empty
-  useEffect(() => {
-    // Simple check: if current code is one of the defaults, we swap it.
-    // Otherwise, we keep what the user wrote.
+  const handleLanguageChange = (newLang: string) => {
+    setLanguage(newLang)
     const isDefault = Object.values(DEFAULT_CODE).includes(code) || !code.trim()
     if (isDefault) {
-      setCode(DEFAULT_CODE[language] || '')
+      setCode(DEFAULT_CODE[newLang] || '')
     }
-  }, [language])
+  }
 
   const handleRunCode = async () => {
     setIsRunning(true)
@@ -210,6 +219,7 @@ export default function DuelArena() {
         "Are you sure you want to submit your final code? You won't be able to edit it anymore."
       )
     ) {
+      setIsSubmitted(true)
       socket?.emit('submit_code', { roomId, userId: user?.id })
     }
   }
@@ -254,11 +264,6 @@ export default function DuelArena() {
                     ? 'Opponent Ready'
                     : 'Waiting for Opponent...'}
                 </span>
-                {opponentActivity && (
-                  <span className="font-['JetBrains_Mono'] text-[10px] text-accent animate-pulse">
-                    {opponentActivity}
-                  </span>
-                )}
               </div>
             </div>
           )}
@@ -298,13 +303,18 @@ export default function DuelArena() {
         {/* Right Side: Editor & Runner */}
         <div className="w-1/2 flex flex-col min-w-[300px] border-l border-border bg-background">
           <div className="h-12 border-b border-border bg-secondary/50 flex items-center justify-between px-4 shrink-0">
-            <LanguageSelector language={language} setLanguage={setLanguage} />
+            <LanguageSelector
+              language={language}
+              setLanguage={handleLanguageChange}
+              disabled={isSubmitted}
+            />
           </div>
 
           {/* Monaco Editor takes remaining space */}
           <CodeEditor
             language={language}
             code={code}
+            readOnly={isSubmitted}
             onChange={(val) => {
               const newCode = val || ''
               setCode(newCode)
@@ -326,6 +336,7 @@ export default function DuelArena() {
             onRun={handleRunCode}
             onSubmit={handleSubmitCode}
             isRunning={isRunning}
+            isSubmitted={isSubmitted}
             result={result}
           />
         </div>

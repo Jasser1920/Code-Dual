@@ -4,9 +4,15 @@ interface CodeEditorProps {
   language: string
   code: string
   onChange: (value: string | undefined) => void
+  readOnly?: boolean
 }
 
-export function CodeEditor({ language, code, onChange }: CodeEditorProps) {
+export function CodeEditor({
+  language,
+  code,
+  onChange,
+  readOnly,
+}: CodeEditorProps) {
   return (
     <div className="flex-1 w-full h-full relative">
       <Editor
@@ -22,6 +28,7 @@ export function CodeEditor({ language, code, onChange }: CodeEditorProps) {
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           padding: { top: 16 },
+          readOnly: readOnly,
         }}
         loading={
           <div className="flex items-center justify-center h-full text-muted-foreground font-['JetBrains_Mono'] text-xs animate-pulse">

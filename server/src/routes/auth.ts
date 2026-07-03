@@ -82,7 +82,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           username: githubUser.login,
           email: primaryEmail,
           emailVerified: true,
-          elo: 1000,
+          elo: 0,
           rankTier: 'Bronze',
           preferredLang: 'javascript',
         },
@@ -129,19 +129,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       })
 
       if (existingUser) {
-        return reply
-          .status(409)
-          .send({ error: 'Email or username already in use' })
+        if (existingUser.email === email) {
+          return reply.status(409).send({ error: 'Email already exists' })
+        }
+        return reply.status(409).send({ error: 'Username already exists' })
       }
 
       const passwordHash = await bcrypt.hash(password, 10)
       const verificationToken = crypto.randomBytes(32).toString('hex')
       const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-      let startingElo = 1000
-      if (skillLevel === 'Beginner') startingElo = 800
-      else if (skillLevel === 'Advanced') startingElo = 1200
-      else if (skillLevel === 'Expert') startingElo = 1400
+      let startingElo = 0
+      // We can keep skillLevel modifiers if desired, but base is 0.
+      // If the user wants 0 strictly:
+      if (skillLevel === 'Advanced') startingElo = 200
+      else if (skillLevel === 'Expert') startingElo = 400
 
       const user = await prisma.user.create({
         data: {

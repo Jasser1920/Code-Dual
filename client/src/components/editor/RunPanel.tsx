@@ -4,6 +4,7 @@ interface RunPanelProps {
   onRun: () => void
   onSubmit: () => void
   isRunning: boolean
+  isSubmitted: boolean
   result: any
 }
 
@@ -11,6 +12,7 @@ export function RunPanel({
   onRun,
   onSubmit,
   isRunning,
+  isSubmitted,
   result,
 }: RunPanelProps) {
   return (
@@ -22,7 +24,7 @@ export function RunPanel({
         <div className="flex items-center gap-3">
           <button
             onClick={onRun}
-            disabled={isRunning}
+            disabled={isRunning || isSubmitted}
             className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-1.5 rounded font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? (
@@ -34,7 +36,8 @@ export function RunPanel({
           </button>
           <button
             onClick={onSubmit}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-sm transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+            disabled={isSubmitted}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-sm transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             Submit Final
           </button>
@@ -59,14 +62,18 @@ export function RunPanel({
               {result.status}
             </div>
 
-            {result.output && (
-              <div>
-                <span className="text-muted-foreground">Output:</span>
-                <pre className="mt-1 p-2 bg-black/40 rounded text-foreground/80 whitespace-pre-wrap">
-                  {result.output}
-                </pre>
-              </div>
-            )}
+            <div>
+              <span className="text-muted-foreground">Output:</span>
+              <pre className="mt-1 p-2 bg-black/40 rounded text-foreground/80 whitespace-pre-wrap min-h-[40px]">
+                {result.output ? (
+                  result.output
+                ) : (
+                  <span className="text-muted-foreground/50 italic">
+                    No output generated (use console.log to print values)
+                  </span>
+                )}
+              </pre>
+            </div>
 
             {result.expected && (
               <div>

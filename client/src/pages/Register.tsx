@@ -98,6 +98,16 @@ export default function Register() {
         {authError && (
           <div className="mb-4 p-3 bg-destructive/10 border border-destructive/50 text-destructive font-['JetBrains_Mono'] text-xs">
             {authError}
+            {authError.toLowerCase().includes('email') && (
+              <div className="mt-2">
+                <Link
+                  to="/forgot-password"
+                  className="text-accent hover:underline font-bold"
+                >
+                  Do you want to recover your password?
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

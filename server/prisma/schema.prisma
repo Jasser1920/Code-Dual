@@ -13,7 +13,7 @@ model User {
   email         String    @unique
   passwordHash  String?   @map("password_hash")
   githubId      String?   @unique @map("github_id")
-  elo           Int       @default(1000)
+  elo           Int       @default(0)
   rankTier      String    @default("Bronze") @map("rank_tier")
   preferredLang String    @default("javascript") @map("preferred_lang")
   bio           String?

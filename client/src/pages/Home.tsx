@@ -252,6 +252,24 @@ export default function Home() {
 
   return (
     <div>
+      {/* Top right auth buttons for guests */}
+      {!isAuthenticated && (
+        <div className="absolute top-6 right-6 z-50 flex items-center gap-4">
+          <button
+            onClick={() => navigate('/login')}
+            className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => navigate('/register')}
+            className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-4 py-2 hover:bg-accent/90 transition-colors"
+          >
+            Sign Up
+          </button>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative min-h-[calc(100vh-3.5rem)] flex flex-col justify-center overflow-hidden">
         <div

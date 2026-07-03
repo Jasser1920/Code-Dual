@@ -22,6 +22,8 @@ import DuelArena from './pages/DuelArena'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
 import DuelResult from './pages/DuelResult'
+import { Toaster } from 'sonner'
+
 function AppContent() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -95,6 +97,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" theme="dark" richColors />
       <AppContent />
     </BrowserRouter>
   )

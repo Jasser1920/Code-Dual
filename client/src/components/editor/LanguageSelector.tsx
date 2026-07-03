@@ -1,9 +1,11 @@
 export function LanguageSelector({
   language,
   setLanguage,
+  disabled,
 }: {
   language: string
   setLanguage: (lang: string) => void
+  disabled?: boolean
 }) {
   const languages = ['javascript', 'python', 'java', 'cpp', 'go', 'rust']
 
@@ -15,7 +17,8 @@ export function LanguageSelector({
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value)}
-        className="bg-secondary/50 text-foreground border border-border rounded px-2 py-1 font-['JetBrains_Mono'] text-xs uppercase focus:outline-none focus:border-accent"
+        disabled={disabled}
+        className="bg-secondary/50 text-foreground border border-border rounded px-2 py-1 font-['JetBrains_Mono'] text-xs uppercase focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {languages.map((lang) => (
           <option key={lang} value={lang}>
