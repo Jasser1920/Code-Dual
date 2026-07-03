@@ -1,33 +1,35 @@
-import nodemailer from 'nodemailer';
+// We use the Brevo (formerly Sendinblue) HTTP API to bypass Render SMTP blocks.
+// You must provide BREVO_API_KEY in your .env file
+const BREVO_API_KEY = process.env.BREVO_API_KEY
 
-// Create a transporter using Gmail SMTP
-// Note: You must provide SMTP_EMAIL and SMTP_PASSWORD in your .env file
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
-
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
 
 /**
  * Sends a verification email to a newly registered user.
  */
-export const sendVerificationEmail = async (to: string, username: string, token: string) => {
-  const verificationLink = `${CLIENT_URL}/verify-email?token=${token}`;
-  
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
-  
-  const dateOpts: Intl.DateTimeFormatOptions = { dateStyle: 'full', timeStyle: 'short' };
+export const sendVerificationEmail = async (
+  to: string,
+  username: string,
+  token: string
+) => {
+  const verificationLink = `${CLIENT_URL}/verify-email?token=${token}`
+
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours
+
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }
 
   const mailOptions = {
-    from: `"Code-Dual" <${process.env.SMTP_EMAIL}>`,
-    to,
+    sender: {
+      email: process.env.SMTP_EMAIL || 'nightbleu28@gmail.com',
+      name: 'Code-Dual',
+    },
+    to: [{ email: to }],
     subject: 'Welcome to Code-Dual! Please verify your email',
-    html: `
+    htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
         <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
         <p>Hello <strong>${username}</strong>,</p>
@@ -49,27 +51,55 @@ export const sendVerificationEmail = async (to: string, username: string, token:
         <p style="font-size: 10px; color: #6b6b7e;">If you did not create an account, no further action is required.</p>
       </div>
     `,
-  };
+  }
 
-  await transporter.sendMail(mailOptions);
-};
+  if (!BREVO_API_KEY) {
+    console.warn('BREVO_API_KEY is not set. Skipping email send.')
+    return
+  }
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(mailOptions),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.text()
+    throw new Error(`Brevo API Error: ${errorData}`)
+  }
+}
 
 /**
  * Sends a password reset email.
  */
-export const sendPasswordResetEmail = async (to: string, username: string, token: string) => {
-  const resetLink = `${CLIENT_URL}/reset-password?token=${token}`;
-  
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour
+export const sendPasswordResetEmail = async (
+  to: string,
+  username: string,
+  token: string
+) => {
+  const resetLink = `${CLIENT_URL}/reset-password?token=${token}`
 
-  const dateOpts: Intl.DateTimeFormatOptions = { dateStyle: 'full', timeStyle: 'short' };
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour
+
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }
 
   const mailOptions = {
-    from: `"Code-Dual Support" <${process.env.SMTP_EMAIL}>`,
-    to,
+    sender: {
+      email: process.env.SMTP_EMAIL || 'nightbleu28@gmail.com',
+      name: 'Code-Dual Support',
+    },
+    to: [{ email: to }],
     subject: 'Code-Dual: Password Reset Request',
-    html: `
+    htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
         <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
         <p>Hello <strong>${username}</strong>,</p>
@@ -91,7 +121,25 @@ export const sendPasswordResetEmail = async (to: string, username: string, token
         <p style="font-size: 10px; color: #6b6b7e;">If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
       </div>
     `,
-  };
+  }
 
-  await transporter.sendMail(mailOptions);
-};
+  if (!BREVO_API_KEY) {
+    console.warn('BREVO_API_KEY is not set. Skipping password reset email.')
+    return
+  }
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(mailOptions),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.text()
+    throw new Error(`Brevo API Error: ${errorData}`)
+  }
+}
