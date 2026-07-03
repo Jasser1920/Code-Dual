@@ -160,7 +160,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Fire and forget email sending
       sendVerificationEmail(user.email, user.username, verificationToken).catch(
-        (err) => request.log.error('Failed to send verification email:', err)
+        (err) =>
+          console.error(
+            'Failed to send verification email:',
+            err.message || err
+          )
       )
 
       const jwtToken = fastify.jwt.sign(
@@ -451,7 +455,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           user.username,
           verificationToken
         ).catch((err) =>
-          request.log.error('Failed to resend verification email:', err)
+          console.error(
+            'Failed to resend verification email:',
+            err.message || err
+          )
         )
 
         return {
