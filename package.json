@@ -7,7 +7,7 @@
     "shared"
   ],
   "scripts": {
-    "prepare": "husky",
+    "prepare": "husky || echo 'Husky skipped'",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "dev": "npm run dev --workspaces --if-present",
