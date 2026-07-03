@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
-import { ArrowLeft, Trophy, Swords, Home, RotateCcw } from 'lucide-react'
+import { Trophy, Swords, Home, RotateCcw } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { useState, useEffect } from 'react'
 
@@ -38,15 +38,6 @@ export default function DuelResult() {
       : status === 'DEFEAT'
         ? 'text-red-500'
         : 'text-yellow-500'
-  const glowColor =
-    status === 'VICTORY'
-      ? 'shadow-green-500/50'
-      : status === 'DEFEAT'
-        ? 'shadow-red-500/50'
-        : 'shadow-yellow-500/50'
-
-  const currentElo = user?.elo || 1000
-
   // Fullscreen Splash Animation
   const [showSplash, setShowSplash] = useState(true)
 

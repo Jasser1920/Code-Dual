@@ -47,7 +47,7 @@ export default function DuelArena() {
   const { roomId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { socket, connect, disconnect } = useSocketStore()
+  const { socket, connect } = useSocketStore()
 
   const [language, setLanguage] = useState('javascript')
   const [code, setCode] = useState(DEFAULT_CODE['javascript'])

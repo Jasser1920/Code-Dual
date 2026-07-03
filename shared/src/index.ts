@@ -18,9 +18,9 @@ export interface AuthUser extends UserProfile {
 
 export interface UpdateProfilePayload {
   location?: string
-  mobileNumber?: string | null;
-  avatarUrl?: string | null;
-  preferredLang?: string;
+  mobileNumber?: string | null
+  avatarUrl?: string | null
+  preferredLang?: string
 }
 
 export interface JwtPayload {
@@ -30,7 +30,7 @@ export interface JwtPayload {
 
 export interface AuthResponse {
   accessToken: string
-  user: UserProfile
+  user: AuthUser
 }
 
 export interface DuelStatus {

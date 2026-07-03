@@ -1,4 +1,3 @@
-import React from 'react'
 import { Play, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
 interface RunPanelProps {

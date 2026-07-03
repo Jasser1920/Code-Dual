@@ -1,5 +1,3 @@
-import React from 'react'
-
 // Mock problem type
 export interface Problem {
   title: string
