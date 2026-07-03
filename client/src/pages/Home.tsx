@@ -330,8 +330,8 @@ export default function Home() {
               <div className="grid grid-cols-4 gap-6 mt-12 pt-12 border-t border-border">
                 {STATS_GLOBAL.map((s) => (
                   <div key={s.label}>
-                    <div className="font-['Barlow_Condensed'] font-extrabold text-2xl text-foreground">
-                      {s.value}
+                    <div className="font-['Barlow_Condensed'] font-extrabold text-2xl text-muted-foreground">
+                      -
                     </div>
                     <div className="font-['Barlow'] text-xs text-muted-foreground mt-0.5">
                       {s.label}
@@ -364,52 +364,13 @@ export default function Home() {
               View all <ChevronRight size={14} />
             </button>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {LIVE_DUELS.slice(0, 4).map((duel) => (
-              <div
-                key={duel.id}
-                className="border border-border bg-card hover:border-accent/30 transition-colors cursor-pointer p-4"
-                onClick={() => navigate(`/duel/${duel.id}`)}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
-                    {duel.lang}
-                  </span>
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Clock size={11} />
-                    <span className="font-['JetBrains_Mono'] text-xs">
-                      {duel.elapsed}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
-                      {duel.p1}
-                    </div>
-                    <div className="font-['JetBrains_Mono'] text-xs text-accent">
-                      {duel.p1rating}
-                    </div>
-                  </div>
-                  <span className="font-['Barlow_Condensed'] text-xs font-bold text-muted-foreground/50 uppercase tracking-widest">
-                    vs
-                  </span>
-                  <div className="text-right">
-                    <div className="font-['JetBrains_Mono'] text-sm font-medium text-foreground">
-                      {duel.p2}
-                    </div>
-                    <div className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
-                      {duel.p2rating}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-border">
-                  <span className="font-['Barlow'] text-xs text-muted-foreground">
-                    {duel.prob}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="border border-border bg-card p-16 text-center">
+            <span className="font-['Barlow_Condensed'] font-bold text-2xl uppercase tracking-widest text-muted-foreground animate-pulse">
+              Coming Soon...
+            </span>
+            <p className="font-['JetBrains_Mono'] text-sm text-muted-foreground mt-2">
+              Spectator mode is under construction.
+            </p>
           </div>
         </div>
       </section>
@@ -536,40 +497,13 @@ export default function Home() {
                   All 340 <ChevronRight size={14} />
                 </button>
               </div>
-              <div className="border border-border overflow-hidden">
-                {PROBLEMS.slice(0, 6).map((prob) => (
-                  <div
-                    key={prob.id}
-                    className="flex items-center justify-between px-4 py-3.5 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer group"
-                    onClick={() => navigate(`/problems/${prob.id}`)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-['Barlow'] text-sm text-foreground group-hover:text-accent transition-colors truncate">
-                        {prob.title}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        {prob.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="font-['JetBrains_Mono'] text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 ml-4 shrink-0">
-                      <span
-                        className={`font-['JetBrains_Mono'] text-xs ${DIFF_COLORS[prob.diff]}`}
-                      >
-                        {prob.diff}
-                      </span>
-                      <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground hidden sm:block">
-                        {prob.solves.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="border border-border bg-card h-[340px] flex flex-col items-center justify-center">
+                <span className="font-['Barlow_Condensed'] font-bold text-2xl uppercase tracking-widest text-muted-foreground animate-pulse">
+                  Coming Soon...
+                </span>
+                <p className="font-['JetBrains_Mono'] text-sm text-muted-foreground mt-2">
+                  Global problem library is being curated.
+                </p>
               </div>
             </div>
           </div>
