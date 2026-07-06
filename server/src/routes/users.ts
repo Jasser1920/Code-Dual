@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { prisma } from '../db.js'
+import { getXpToNextLevel, getXpForCurrentLevel } from '../utils/xp.js'
 
 const usersRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/leaderboard', async (request, reply) => {
@@ -58,6 +59,8 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
         location: true,
         avatarUrl: true,
         preferredLang: true,
+        xp: true,
+        level: true,
         _count: {
           select: {
             wonDuels: true,
@@ -137,6 +140,7 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       return {
+        id: d.id,
         opp: opponent?.username || 'Unknown',
         result,
         rating: ratingDelta,
@@ -166,6 +170,10 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
         losses,
         streak: 0,
         lang: user.preferredLang || 'javascript',
+        xp: user.xp,
+        level: user.level,
+        nextLevelXp: getXpToNextLevel(user.level),
+        currentLevelBaseXp: getXpForCurrentLevel(user.level),
       },
       ratingHistory,
       matchHistory,

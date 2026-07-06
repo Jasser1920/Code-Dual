@@ -16,6 +16,8 @@ model User {
   elo           Int       @default(0)
   rankTier      String    @default("Bronze") @map("rank_tier")
   preferredLang String    @default("javascript") @map("preferred_lang")
+  xp            Int       @default(0)
+  level         Int       @default(1)
   bio           String?
   avatarUrl     String?   @map("avatar_url")
   location      String?

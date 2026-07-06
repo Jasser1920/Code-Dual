@@ -8,6 +8,8 @@ export interface UserProfile {
   location?: string
   mobileNumber?: string
   preferredLang?: string
+  xp?: number
+  level?: number
 }
 
 export interface AuthUser extends UserProfile {

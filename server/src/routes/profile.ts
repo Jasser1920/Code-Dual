@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../db.js'
+import { getXpToNextLevel, getXpForCurrentLevel } from '../utils/xp.js'
 import type { UpdateProfilePayload } from '@code-dual/shared'
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
@@ -30,6 +31,8 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         mobileNumber: true,
         preferredLang: true,
         emailVerified: true,
+        xp: true,
+        level: true,
       },
     })
 
@@ -37,7 +40,10 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: 'User not found' })
     }
 
-    return { user }
+    const nextLevelXp = getXpToNextLevel(user.level)
+    const currentLevelBaseXp = getXpForCurrentLevel(user.level)
+
+    return { user: { ...user, nextLevelXp, currentLevelBaseXp } }
   })
 
   // PUT /profile
@@ -65,10 +71,15 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
           mobileNumber: true,
           preferredLang: true,
           emailVerified: true,
+          xp: true,
+          level: true,
         },
       })
 
-      return { user }
+      const nextLevelXp = getXpToNextLevel(user.level)
+      const currentLevelBaseXp = getXpForCurrentLevel(user.level)
+
+      return { user: { ...user, nextLevelXp, currentLevelBaseXp } }
     } catch (error) {
       request.log.error(error)
       return reply.status(500).send({ error: 'Failed to update profile' })
@@ -86,9 +97,11 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const user = await prisma.user.findUnique({ where: { id: userId } })
-      
+
       if (!user || !user.passwordHash) {
-        return reply.status(400).send({ error: 'User does not have a password set' })
+        return reply
+          .status(400)
+          .send({ error: 'User does not have a password set' })
       }
 
       const isValid = await bcrypt.compare(oldPassword, user.passwordHash)
@@ -100,7 +113,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
       await prisma.user.update({
         where: { id: userId },
-        data: { passwordHash: newPasswordHash }
+        data: { passwordHash: newPasswordHash },
       })
 
       return { success: true }

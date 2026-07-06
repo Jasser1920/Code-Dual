@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import type { FastifyInstance } from 'fastify'
 import { judgeCode } from './services/judging.js'
 import { PrismaClient } from '@prisma/client'
+import { calculateMatchXp, calculateLevelFromXp } from './utils/xp.js'
 
 const prisma = new PrismaClient()
 
@@ -192,14 +193,38 @@ export function setupSocket(app: FastifyInstance) {
         newEloP1 = R1 + deltaP1
         newEloP2 = R2 + deltaP2
 
+        let difficulty = 'easy'
+        if (room.dbDuelId) {
+          const duel = await prisma.duel.findUnique({
+            where: { id: room.dbDuelId },
+            include: { problem: true },
+          })
+          if (duel) difficulty = duel.problem.difficulty
+        }
+
+        const xp1 = calculateMatchXp(
+          winnerId === p1.userId ? 'win' : isDraw ? 'draw' : 'loss',
+          difficulty
+        )
+        const xp2 = calculateMatchXp(
+          winnerId === p2.userId ? 'win' : isDraw ? 'draw' : 'loss',
+          difficulty
+        )
+
+        const newXpP1 = user1.xp + xp1
+        const newXpP2 = user2.xp + xp2
+
+        const newLevelP1 = calculateLevelFromXp(newXpP1)
+        const newLevelP2 = calculateLevelFromXp(newXpP2)
+
         // Update Users
         await prisma.user.update({
           where: { id: p1.userId },
-          data: { elo: newEloP1 },
+          data: { elo: newEloP1, xp: newXpP1, level: newLevelP1 },
         })
         await prisma.user.update({
           where: { id: p2.userId },
-          data: { elo: newEloP2 },
+          data: { elo: newEloP2, xp: newXpP2, level: newLevelP2 },
         })
 
         // Update Duel

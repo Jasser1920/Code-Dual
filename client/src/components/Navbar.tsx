@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Send,
   Trophy,
+  User,
 } from 'lucide-react'
 import Avatar from './Avatar'
 import { api } from '../api/axios'
@@ -143,7 +144,16 @@ export default function Navbar() {
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
           >
-            {user && <Avatar user={user} size="sm" />}
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex flex-col items-end">
+                  <span className="font-['JetBrains_Mono'] text-xs font-bold text-accent">
+                    Lvl {user.level || 1}
+                  </span>
+                </div>
+                <Avatar user={user} size="sm" />
+              </div>
+            )}
             <ChevronDown size={14} className="text-muted-foreground" />
           </button>
 
@@ -156,6 +166,16 @@ export default function Navbar() {
               ></div>
 
               <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border shadow-2xl z-50 py-1">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate(`/profile/${user?.username}`)
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/80 flex items-center gap-3 font-['JetBrains_Mono'] transition-colors"
+                >
+                  <User size={14} className="text-muted-foreground" /> My
+                  Profile
+                </button>
                 <button
                   onClick={() => {
                     setMenuOpen(false)

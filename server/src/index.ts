@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js'
 import profileRoutes from './routes/profile.js'
 import executeRoutes from './routes/execute.js'
 import usersRoutes from './routes/users.js'
+import duelsRoutes from './routes/duels.js'
 import { setupSocket } from './socket.js'
 
 dotenv.config()
@@ -47,6 +48,7 @@ app.register(authRoutes, { prefix: '/auth' })
 app.register(profileRoutes, { prefix: '/profile' })
 app.register(executeRoutes, { prefix: '/execute' })
 app.register(usersRoutes, { prefix: '/users' })
+app.register(duelsRoutes, { prefix: '/duels' })
 
 // Health check route
 app.get('/health', async () => {

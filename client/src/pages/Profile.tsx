@@ -8,6 +8,10 @@ import {
   Calendar,
   ArrowRight,
   Loader2,
+  Edit3,
+  Star,
+  Award,
+  Shield,
 } from 'lucide-react'
 import {
   LineChart,
@@ -16,9 +20,46 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from 'recharts'
 import { Button } from '../components/ui/button'
 import axios from 'axios'
+import { useAuthStore } from '../store/useAuthStore'
+import MatchDetailsModal from '../components/MatchDetailsModal'
+import OpponentPopup from '../components/OpponentPopup'
+
+// Mock Data for Radar Chart
+const languageData = [
+  { subject: 'Python', A: 120, fullMark: 150 },
+  { subject: 'JS/TS', A: 98, fullMark: 150 },
+  { subject: 'C++', A: 86, fullMark: 150 },
+  { subject: 'Java', A: 99, fullMark: 150 },
+  { subject: 'Go', A: 85, fullMark: 150 },
+  { subject: 'Rust', A: 65, fullMark: 150 },
+]
+
+// Mock Trophies
+const trophies = [
+  {
+    title: 'First Blood',
+    desc: 'Won first duel',
+    icon: <Star className="text-yellow-400" size={20} />,
+  },
+  {
+    title: 'Unstoppable',
+    desc: '3 Win Streak',
+    icon: <Award className="text-emerald-400" size={20} />,
+  },
+  {
+    title: 'David vs Goliath',
+    desc: 'Beat higher ELO',
+    icon: <Shield className="text-accent" size={20} />,
+  },
+]
 
 export default function Profile() {
   const { username } = useParams()
@@ -28,6 +69,10 @@ export default function Profile() {
   const [ratingHistory, setRatingHistory] = useState<any[]>([])
   const [matchHistory, setMatchHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  const { user } = useAuthStore()
+  const [selectedDuelId, setSelectedDuelId] = useState<string | null>(null)
+  const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -71,17 +116,31 @@ export default function Profile() {
   const winRate =
     totalMatches === 0 ? 0 : Math.round((player.wins / totalMatches) * 100)
 
+  const currentXp = player.xp || 0
+  const currentBase = player.currentLevelBaseXp || 0
+  const nextXp = player.nextLevelXp || 100
+  const xpProgress = Math.max(
+    0,
+    Math.min(100, ((currentXp - currentBase) / (nextXp - currentBase)) * 100)
+  )
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
       {/* Header */}
       <div className="grid lg:grid-cols-3 gap-8 mb-10">
         <div className="lg:col-span-2 flex items-start gap-6">
-          <div className="w-16 h-16 bg-secondary border border-border flex items-center justify-center shrink-0">
-            <span className="font-['Barlow_Condensed'] font-extrabold text-2xl text-muted-foreground">
-              {player.name[0].toUpperCase()}
-            </span>
+          <div className="relative">
+            <div className="w-20 h-20 bg-secondary border-2 border-accent flex items-center justify-center shrink-0">
+              <span className="font-['Barlow_Condensed'] font-extrabold text-3xl text-foreground">
+                {player.name[0].toUpperCase()}
+              </span>
+            </div>
+            {/* Level Badge Overlay */}
+            <div className="absolute -bottom-2 -right-2 bg-accent text-background w-8 h-8 flex items-center justify-center font-['JetBrains_Mono'] font-bold text-xs shadow-lg transform rotate-12 border-2 border-background">
+              L{player.level || 1}
+            </div>
           </div>
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="font-['JetBrains_Mono'] font-bold text-2xl text-foreground">
                 {player.name}
@@ -98,7 +157,24 @@ export default function Profile() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-6 mt-3">
+
+            {/* XP Progress Bar */}
+            <div className="mt-4 max-w-md">
+              <div className="flex justify-between text-[10px] font-['JetBrains_Mono'] text-muted-foreground mb-1 uppercase tracking-widest">
+                <span>XP Progress</span>
+                <span>
+                  {currentXp} / {nextXp} XP
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-accent transition-all duration-1000 ease-out"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 mt-6">
               <div>
                 <div className="font-['Barlow_Condensed'] font-extrabold text-3xl text-foreground">
                   {player.rating}
@@ -127,12 +203,22 @@ export default function Profile() {
           </div>
         </div>
         <div className="flex items-start justify-end gap-3">
-          <Button
-            onClick={() => navigate('/duels')}
-            className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-xs h-10 px-5"
-          >
-            <Zap size={13} className="mr-1.5" /> Challenge
-          </Button>
+          {user?.username === player.name ? (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/profile/edit')}
+              className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-xs h-10 px-5"
+            >
+              <Edit3 size={13} className="mr-1.5" /> Edit Profile
+            </Button>
+          ) : (
+            <Button
+              onClick={() => alert('Challenge feature coming soon!')}
+              className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-xs h-10 px-5"
+            >
+              <Zap size={13} className="mr-1.5" /> Challenge
+            </Button>
+          )}
         </div>
       </div>
 
@@ -183,18 +269,75 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Solved problems (Hidden for now until Problem feature is complete) */}
-          {/* 
+          {/* Language Radar */}
           <div className="border border-border bg-card p-5">
-            <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm mb-4">Solved</h2>
-            <div className="space-y-2">
+            <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm mb-4">
+              Language Radar
+            </h2>
+            <div className="h-48 -ml-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="70%"
+                  data={languageData}
+                >
+                  <PolarGrid stroke="#2e2e38" />
+                  <PolarAngleAxis
+                    dataKey="subject"
+                    tick={{
+                      fill: '#6b6b7e',
+                      fontSize: 10,
+                      fontFamily: 'JetBrains Mono',
+                    }}
+                  />
+                  <PolarRadiusAxis
+                    angle={30}
+                    domain={[0, 150]}
+                    tick={false}
+                    axisLine={false}
+                  />
+                  <Radar
+                    name="Language Mastery"
+                    dataKey="A"
+                    stroke="#5b4ff0"
+                    fill="#5b4ff0"
+                    fillOpacity={0.3}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
             </div>
           </div>
-          */}
         </div>
 
         {/* Right column */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Trophies & Badges */}
+          <div className="border border-border bg-card p-5">
+            <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm mb-4">
+              Trophies & Badges
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {trophies.map((t, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 bg-secondary/30 border border-border p-3 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="p-2 bg-background border border-border shrink-0">
+                    {t.icon}
+                  </div>
+                  <div>
+                    <div className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm text-foreground">
+                      {t.title}
+                    </div>
+                    <div className="font-['JetBrains_Mono'] text-[10px] text-muted-foreground mt-0.5">
+                      {t.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           {/* Rating chart */}
           <div className="border border-border bg-card p-5">
             <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm mb-5">
@@ -270,7 +413,8 @@ export default function Profile() {
               matchHistory.map((m: any, i: number) => (
                 <div
                   key={i}
-                  className="flex items-center gap-4 px-5 py-3 border-b border-border last:border-b-0 hover:bg-secondary/20 transition-colors"
+                  onClick={() => m.id && setSelectedDuelId(m.id)}
+                  className="flex items-center gap-4 px-5 py-3 border-b border-border last:border-b-0 hover:bg-secondary/40 cursor-pointer transition-colors"
                 >
                   <div
                     className={`w-12 text-center font-['Barlow_Condensed'] font-bold text-sm uppercase ${m.result === 'win' ? 'text-emerald-400' : m.result === 'loss' ? 'text-red-400' : 'text-yellow-400'}`}
@@ -312,6 +456,26 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {selectedDuelId && user?.id && (
+        <MatchDetailsModal
+          duelId={selectedDuelId}
+          currentUserId={user.id}
+          onClose={() => setSelectedDuelId(null)}
+          onOpponentClick={(oppUsername) => setSelectedOpponent(oppUsername)}
+        />
+      )}
+
+      {selectedOpponent && (
+        <OpponentPopup
+          username={selectedOpponent}
+          onClose={() => setSelectedOpponent(null)}
+          onChallenge={() => {
+            setSelectedOpponent(null)
+            alert('Challenge feature coming soon!')
+          }}
+        />
+      )}
     </div>
   )
 }
