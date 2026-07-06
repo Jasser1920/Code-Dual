@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Code2, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
@@ -7,11 +7,15 @@ import { Input } from '../components/ui/input'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login, error: authError } = useAuthStore()
+  const { login, error: authError, clearError } = useAuthStore()
 
   const [showPass, setShowPass] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    clearError()
+  }, [clearError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,6 +58,14 @@ export default function Login() {
         {authError && (
           <div className="mb-4 p-3 bg-destructive/10 border border-destructive/50 text-destructive font-['JetBrains_Mono'] text-xs">
             {authError}
+            <div className="mt-2">
+              <Link
+                to="/forgot-password"
+                className="text-accent hover:underline font-bold"
+              >
+                Do you want to recover your password?
+              </Link>
+            </div>
           </div>
         )}
 
@@ -68,7 +80,7 @@ export default function Login() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="font-['JetBrains_Mono'] h-11"
-              placeholder="Email or Username"
+              placeholder="name@example.com or username"
             />
           </div>
           <div>
@@ -91,7 +103,7 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="font-['JetBrains_Mono'] pr-10 h-11"
-                placeholder="Password"
+                placeholder="••••••••"
               />
               <button
                 type="button"

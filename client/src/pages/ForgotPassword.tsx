@@ -78,7 +78,7 @@ export default function ForgotPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="font-['JetBrains_Mono'] h-11"
-              placeholder="you@domain.com"
+              placeholder="name@example.com"
             />
           </div>
 

@@ -16,10 +16,10 @@ import {
   Loader2,
   Link as LinkIcon,
 } from 'lucide-react'
-import { LIVE_DUELS, STATS_GLOBAL } from '../data/mock'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
 import axios from 'axios'
+import OnboardingModal from '../components/OnboardingModal'
 
 function DuelMockup() {
   return (
@@ -113,6 +113,18 @@ export default function Home() {
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [topPlayers, setTopPlayers] = useState<any[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (isAuthenticated && !localStorage.getItem('code_dual_onboarding_seen')) {
+      setShowOnboarding(true)
+    }
+  }, [isAuthenticated])
+
+  const handleCloseOnboarding = () => {
+    localStorage.setItem('code_dual_onboarding_seen', 'true')
+    setShowOnboarding(false)
+  }
 
   useEffect(() => {
     const fetchTopPlayers = async () => {
@@ -252,6 +264,8 @@ export default function Home() {
 
   return (
     <div>
+      {showOnboarding && <OnboardingModal onClose={handleCloseOnboarding} />}
+
       {/* Top right auth buttons for guests */}
       {!isAuthenticated && (
         <div className="absolute top-6 right-6 z-50 flex items-center gap-4">
@@ -292,7 +306,7 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-6">
                 <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
                 <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
-                  {LIVE_DUELS.length} duels live now
+                  Active duels live now
                 </span>
               </div>
               <h1 className="font-['Barlow_Condensed'] font-extrabold text-6xl lg:text-8xl leading-none tracking-tight text-foreground mb-4 uppercase">
@@ -307,37 +321,32 @@ export default function Home() {
                 rival, and prove you're the faster engineer. Rated, ranked, and
                 ruthless.
               </p>
-              <div className="flex items-center gap-4 flex-wrap">
-                <button
-                  onClick={handlePlayClick}
-                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm bg-accent text-accent-foreground px-6 py-3 flex items-center gap-2 hover:bg-accent/90 transition-colors"
-                >
-                  Find a Duel <ArrowRight size={16} />
-                </button>
-                <button
-                  onClick={handlePlayWithFriend}
-                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm border border-accent text-accent px-6 py-3 flex items-center gap-2 hover:bg-accent/10 transition-colors"
-                >
-                  Play with a Friend <LinkIcon size={16} />
-                </button>
-                <button
-                  onClick={() => navigate('/leaderboard')}
-                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm border border-border text-muted-foreground px-6 py-3 hover:text-foreground hover:border-foreground/20 transition-colors"
-                >
-                  Watch Live
-                </button>
+              <div className="flex flex-col items-start gap-4 mt-4">
+                <div className="flex items-center gap-6 flex-wrap">
+                  <button
+                    onClick={handlePlayClick}
+                    className="font-['Barlow_Condensed'] font-extrabold uppercase tracking-widest text-lg bg-accent text-accent-foreground px-8 py-4 flex items-center gap-3 transition-all border-2 border-transparent hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_hsl(var(--foreground))] active:translate-y-0 active:shadow-none"
+                  >
+                    Find a Duel <ArrowRight size={20} />
+                  </button>
+                  <button
+                    onClick={handlePlayWithFriend}
+                    className="font-['Barlow_Condensed'] font-extrabold uppercase tracking-widest text-lg bg-background text-foreground border-2 border-border px-8 py-4 flex items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_hsl(var(--accent))] active:translate-y-0 active:shadow-none hover:border-accent"
+                  >
+                    Play with a Friend <LinkIcon size={20} />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center gap-2 text-muted-foreground font-['JetBrains_Mono'] text-xs">
+                  <span className="opacity-50">Want to spectate?</span>
+                  <span className="text-accent border-b border-accent/30 pb-0.5 cursor-not-allowed">
+                    Watch Live Matches (Coming Soon)
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-4 gap-6 mt-12 pt-12 border-t border-border">
-                {STATS_GLOBAL.map((s) => (
-                  <div key={s.label}>
-                    <div className="font-['Barlow_Condensed'] font-extrabold text-2xl text-muted-foreground">
-                      -
-                    </div>
-                    <div className="font-['Barlow'] text-xs text-muted-foreground mt-0.5">
-                      {s.label}
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-12 pt-12 border-t border-border">
+                <div className="font-['Barlow_Condensed'] font-bold text-lg uppercase tracking-widest text-muted-foreground animate-pulse">
+                  Platform Stats Coming Soon...
+                </div>
               </div>
             </div>
             <div className="hidden lg:block">

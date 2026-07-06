@@ -14,6 +14,7 @@ interface AuthState {
   isLoading: boolean
   error: string | null
 
+  clearError: () => void
   login: (credentials: { email: string; password: string }) => Promise<void>
   register: (data: {
     username: string
@@ -36,6 +37,8 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+
+      clearError: () => set({ error: null }),
 
       login: async (credentials) => {
         try {

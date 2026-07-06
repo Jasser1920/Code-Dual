@@ -1,6 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Code2, ArrowRight, Eye, EyeOff, Check } from 'lucide-react'
+import {
+  Code2,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Check,
+  Shield,
+  Lock,
+} from 'lucide-react'
 import { LANGUAGES } from '../data/mock'
 import { useAuthStore } from '../store/useAuthStore'
 import { Button } from '../components/ui/button'
@@ -8,13 +16,63 @@ import { Input } from '../components/ui/input'
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 
+const checkPasswordStrength = (pass: string) => {
+  let score = 0
+  if (!pass) return { score: 0, label: '', color: 'bg-muted', issues: [] }
+
+  const issues = []
+  if (pass.length < 12) issues.push('At least 12 characters')
+  else score += 1
+
+  if (!/[A-Z]/.test(pass) || !/[a-z]/.test(pass))
+    issues.push('Mix of upper & lowercase')
+  else score += 1
+
+  if (!/[0-9]/.test(pass)) issues.push('At least one number')
+  else score += 1
+
+  if (!/[^A-Za-z0-9]/.test(pass)) issues.push('At least one symbol')
+  else score += 1
+
+  const lowerPass = pass.toLowerCase()
+  if (
+    lowerPass.includes('1234') ||
+    lowerPass.includes('password') ||
+    lowerPass.includes('qwerty')
+  ) {
+    score = Math.max(0, score - 1)
+    issues.push('Avoid common sequences')
+  }
+
+  if (pass.length < 12) score = Math.min(score, 1)
+
+  switch (score) {
+    case 0:
+      return { score, label: 'Weak', color: 'bg-destructive', issues }
+    case 1:
+      return { score, label: 'Fair', color: 'bg-orange-500', issues }
+    case 2:
+      return { score, label: 'Good', color: 'bg-yellow-500', issues }
+    case 3:
+      return { score, label: 'Strong', color: 'bg-emerald-400', issues }
+    case 4:
+      return { score, label: 'Excellent', color: 'bg-emerald-500', issues }
+    default:
+      return { score: 0, label: '', color: 'bg-muted', issues }
+  }
+}
+
 export default function Register() {
   const navigate = useNavigate()
-  const { register, error: authError } = useAuthStore()
+  const { register, error: authError, clearError } = useAuthStore()
 
   const [step, setStep] = useState(1)
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    clearError()
+  }, [clearError])
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -23,8 +81,14 @@ export default function Register() {
     skill: 'Intermediate',
   })
 
+  const strength = checkPasswordStrength(form.password)
+
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault()
+    if (strength.issues.length > 0) {
+      // Don't proceed if password is weak
+      return
+    }
     setStep(2)
   }
 
@@ -124,7 +188,7 @@ export default function Register() {
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 className="font-['JetBrains_Mono'] h-11"
-                placeholder="User name"
+                placeholder="johndoe123"
               />
             </div>
             <div>
@@ -137,7 +201,7 @@ export default function Register() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="font-['JetBrains_Mono'] h-11"
-                placeholder="you@domain.com"
+                placeholder="name@example.com"
               />
             </div>
             <div>
@@ -148,13 +212,12 @@ export default function Register() {
                 <Input
                   type={showPass ? 'text' : 'password'}
                   required
-                  minLength={8}
                   value={form.password}
                   onChange={(e) =>
                     setForm({ ...form, password: e.target.value })
                   }
                   className="font-['JetBrains_Mono'] pr-10 h-11"
-                  placeholder="min 8 characters"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
@@ -164,10 +227,43 @@ export default function Register() {
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+
+              {/* Password Strength Meter */}
+              {form.password && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-1 h-1">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div
+                        key={level}
+                        className={`flex-1 rounded-full transition-colors ${
+                          strength.score >= level ? strength.color : 'bg-muted'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span
+                      className={`font-['JetBrains_Mono'] text-xs font-bold ${strength.color.replace('bg-', 'text-')}`}
+                    >
+                      {strength.label}
+                    </span>
+                  </div>
+                  {strength.issues.length > 0 && (
+                    <ul className="text-xs font-['Barlow'] text-muted-foreground list-disc pl-4 space-y-1 mt-1">
+                      {strength.issues.map((issue, i) => (
+                        <li key={i} className="text-destructive/80">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
             <Button
               type="submit"
               size="lg"
+              disabled={form.password.length > 0 && strength.issues.length > 0}
               className="w-full font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-base mt-2 h-12"
             >
               Continue <ArrowRight size={16} className="ml-2" />
@@ -241,6 +337,20 @@ export default function Register() {
         )}
 
         <div className="mt-6 pt-6 border-t border-border">
+          <div className="flex flex-col items-center gap-2.5 mb-6">
+            <div className="flex items-center gap-2 text-muted-foreground/70">
+              <Shield size={14} className="text-emerald-500" />
+              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-widest">
+                100% Sandboxed Code Execution
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground/70">
+              <Lock size={14} className="text-accent" />
+              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-widest">
+                End-to-End Encrypted Credentials
+              </span>
+            </div>
+          </div>
           <div className="flex gap-3">
             <Button
               variant="outline"

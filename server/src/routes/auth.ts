@@ -261,7 +261,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       const isValid = await bcrypt.compare(password, user.passwordHash)
       if (!isValid) {
-        return reply.status(401).send({ error: 'Invalid email or password' })
+        return reply.status(401).send({
+          error: 'Invalid email or password',
+        })
       }
 
       const jwtToken = fastify.jwt.sign(
@@ -375,12 +377,22 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           user.username,
           resetPasswordToken
         ).catch((err) => request.log.error('Failed to send reset email:', err))
-      }
 
-      // Always return success to prevent email enumeration
-      return {
-        success: true,
-        message: 'If that email exists, a reset link was sent.',
+        return {
+          success: true,
+          message: `We sent a recovery link to ${email}`,
+        }
+      } else if (user && user.githubId) {
+        return reply
+          .status(400)
+          .send({
+            error:
+              'This account uses GitHub login. Please sign in with GitHub.',
+          })
+      } else {
+        return reply
+          .status(404)
+          .send({ error: 'Sorry, this email does not exist' })
       }
     } catch (error) {
       request.log.error(error)
