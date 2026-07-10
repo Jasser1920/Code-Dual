@@ -17,8 +17,8 @@ export async function judgeCode(
   code: string,
   language: string
 ): Promise<JudgeResult> {
-  // We mock a test case for Two Sum: the expected output is "[0, 1]"
-  const expectedOutput = '[0, 1]'
+  // We mock a test case for Two Sum: the expected output is "[0,1]" (stripped)
+  const expectedOutput = '[0,1]'
 
   const tmpDir = os.tmpdir()
   const fileName = `code_dual_judge_${Date.now()}_${Math.random().toString(36).substring(7)}`
@@ -30,17 +30,30 @@ export async function judgeCode(
   try {
     if (language === 'javascript') {
       const filePath = path.join(tmpDir, `${fileName}.js`)
-      await fs.writeFile(filePath, code)
-      const { stdout: out, stderr: err } = await execAsync(`node ${filePath}`)
-      stdout = out
-      stderr = err
+      // Automatically run the test case for Two Sum
+      const wrappedCode = `${code}
+
+// --- TEST RUNNER ---
+const _test_result = twoSum([2, 7, 11, 15], 9);
+console.log(JSON.stringify(_test_result).replace(/\\s/g, ''));`
+      await fs.writeFile(filePath, wrappedCode)
+      const { stdout: out } = await execAsync(`node ${filePath}`)
+      // Only get the last line of output (in case they used console.log)
+      const lines = out.trim().split('\n')
+      stdout = lines[lines.length - 1] || ''
       await fs.unlink(filePath).catch(() => {})
     } else if (language === 'python') {
       const filePath = path.join(tmpDir, `${fileName}.py`)
-      await fs.writeFile(filePath, code)
-      const { stdout: out, stderr: err } = await execAsync(`python ${filePath}`)
-      stdout = out
-      stderr = err
+      const wrappedCode = `${code}
+
+# --- TEST RUNNER ---
+_test_res = twoSum([2, 7, 11, 15], 9)
+print(str(_test_res).replace(" ", ""))
+`
+      await fs.writeFile(filePath, wrappedCode)
+      const { stdout: out } = await execAsync(`python ${filePath}`)
+      const lines = out.trim().split('\n')
+      stdout = lines[lines.length - 1] || ''
       await fs.unlink(filePath).catch(() => {})
     } else {
       return {
@@ -57,7 +70,28 @@ export async function judgeCode(
   const time = Date.now() - startTime
 
   if (stderr) {
-    return { score: 0, time, success: false, error: 'Runtime/Syntax Error' }
+    let cleanErr = typeof stderr === 'string' ? stderr : String(stderr)
+
+    // Clean up internal paths so they don't confuse the user
+    if (language === 'javascript') {
+      const jsPath = path.join(tmpDir, `${fileName}.js`).replace(/\\/g, '\\\\')
+      cleanErr = cleanErr.replace(new RegExp(jsPath, 'g'), 'main.js')
+    } else if (language === 'python') {
+      const pyPath = path.join(tmpDir, `${fileName}.py`).replace(/\\/g, '\\\\')
+      cleanErr = cleanErr.replace(new RegExp(pyPath, 'g'), 'main.py')
+    }
+
+    // If it was just a warning from Node (and exec didn't fail), ignore it!
+    // But if we caught it in the catch block above, then it's a real failure.
+    // Wait, let's just return it as error to be safe, but only if it's long enough to be an error
+    // Actually, any stderr from an explicit throw will be caught.
+    const shortErr = cleanErr.split('\n').slice(0, 4).join('\n').trim()
+    return {
+      score: 0,
+      time,
+      success: false,
+      error: `Runtime Error:\n${shortErr}`,
+    }
   }
 
   const cleanStdout = stdout.trim()

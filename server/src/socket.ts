@@ -114,6 +114,9 @@ export function setupSocket(app: FastifyInstance) {
 
     app.log.info(`Evaluating duel ${roomId}...`)
 
+    // Artificial delay to let the beautiful "Evaluating Results" neon animation play on the client
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+
     const playersArray = Array.from(room.players.values())
     if (playersArray.length !== 2) {
       io.to(roomId).emit('duel_end', {
@@ -133,10 +136,12 @@ export function setupSocket(app: FastifyInstance) {
     let isDraw = false
     let res1: any = { score: 0, time: 0 }
     let res2: any = { score: 0, time: 0 }
+    let reason = ''
 
     if (forfeitUserId) {
-      // Someone disconnected and timed out
+      isDraw = false
       winnerId = forfeitUserId === p1.userId ? p2.userId : p1.userId
+      reason = 'forfeit'
     } else {
       // Evaluate both codes
       res1 = await judgeCode(p1.code, p1.language)
@@ -144,18 +149,44 @@ export function setupSocket(app: FastifyInstance) {
 
       if (res1.score > res2.score) {
         winnerId = p1.userId
+        reason = 'score'
       } else if (res2.score > res1.score) {
         winnerId = p2.userId
+        reason = 'score'
       } else {
         // Tie on score. Tiebreaker: execution time (if both success)
         if (res1.score === 100) {
-          if (res1.time < res2.time) winnerId = p1.userId
-          else if (res2.time < res1.time) winnerId = p2.userId
-          else isDraw = true
+          if (res1.time < res2.time) {
+            winnerId = p1.userId
+            reason = 'time'
+          } else if (res2.time < res1.time) {
+            winnerId = p2.userId
+            reason = 'time'
+          } else {
+            isDraw = true
+            reason = 'draw_time'
+          }
         } else {
           isDraw = true // Both failed
+          reason = 'draw_score'
         }
       }
+    }
+
+    const analysisData = {
+      reason,
+      p1: {
+        id: p1.userId,
+        score: res1.score,
+        time: res1.time,
+        error: res1.error,
+      },
+      p2: {
+        id: p2.userId,
+        score: res2.score,
+        time: res2.time,
+        error: res2.error,
+      },
     }
 
     const playerCodes: Record<string, string> = {
@@ -290,6 +321,7 @@ export function setupSocket(app: FastifyInstance) {
       isDraw,
       playerCodes,
       playerLanguages,
+      analysis: analysisData,
       eloUpdates: {
         [p1.userId]: { delta: deltaP1, newElo: newEloP1 },
         [p2.userId]: { delta: deltaP2, newElo: newEloP2 },
@@ -460,6 +492,7 @@ export function setupSocket(app: FastifyInstance) {
       }
 
       if (allSubmitted && room.players.size === 2) {
+        io.to(roomId).emit('evaluating_results')
         endDuelAndEvaluate(roomId, room)
       } else {
         socket

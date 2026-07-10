@@ -7,7 +7,7 @@ import { LanguageSelector } from '../components/editor/LanguageSelector'
 import { ProblemPanel } from '../components/editor/ProblemPanel'
 import type { Problem } from '../components/editor/ProblemPanel'
 import { RunPanel } from '../components/editor/RunPanel'
-import { ArrowLeft, Clock, Loader2 } from 'lucide-react'
+import { ArrowLeft, Clock, Loader2, Check } from 'lucide-react'
 import axios from 'axios'
 import { JUDGE0_LANGUAGE_IDS } from '../utils/judge0'
 import { toast } from 'sonner'
@@ -55,6 +55,7 @@ export default function DuelArena() {
   const [isRunning, setIsRunning] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isEvaluating, setIsEvaluating] = useState(false)
 
   const [opponentJoined, setOpponentJoined] = useState(false)
   const [opponentCode, setOpponentCode] = useState('')
@@ -113,9 +114,20 @@ export default function DuelArena() {
       setOpponentJoined(true) // Since they are restoring, the room was already full!
     })
 
+    socket.on('evaluating_results', () => {
+      setIsEvaluating(true)
+    })
+
     socket.on(
       'duel_end',
-      ({ winnerId, isDraw, playerCodes, playerLanguages, eloUpdates }) => {
+      ({
+        winnerId,
+        isDraw,
+        playerCodes,
+        playerLanguages,
+        eloUpdates,
+        analysis,
+      }) => {
         const myId = user.id
         const opponentId =
           Object.keys(playerCodes).find((id) => id !== myId) || 'unknown'
@@ -133,6 +145,9 @@ export default function DuelArena() {
             result: status,
             language: playerLanguages[myId] || language,
             eloUpdates: eloUpdates,
+            analysis: analysis,
+            myId: myId,
+            opponentId: opponentId,
           },
         })
       }
@@ -145,6 +160,7 @@ export default function DuelArena() {
       socket.off('restore_state')
       socket.off('timer_tick')
       socket.off('opponent_activity')
+      socket.off('evaluating_results')
       socket.off('duel_end')
     }
   }, [socket, roomId, user])
@@ -225,7 +241,24 @@ export default function DuelArena() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden relative">
+      {/* Evaluation Loading Overlay */}
+      {isEvaluating && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
+          <div className="flex flex-col items-center w-full max-w-sm px-6">
+            <h2 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-[0.2em] text-foreground mb-6">
+              Evaluating Results
+            </h2>
+            <div className="w-full h-1.5 bg-secondary overflow-hidden rounded-none relative">
+              <div className="absolute inset-y-0 left-0 bg-foreground w-full animate-pulse"></div>
+            </div>
+            <p className="mt-4 font-['JetBrains_Mono'] text-xs text-muted-foreground tracking-widest uppercase">
+              Executing tests...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Top Navbar specifically for Arena */}
       <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-4">
@@ -311,25 +344,51 @@ export default function DuelArena() {
           </div>
 
           {/* Monaco Editor takes remaining space */}
-          <CodeEditor
-            language={language}
-            code={code}
-            readOnly={isSubmitted}
-            onChange={(val) => {
-              const newCode = val || ''
-              setCode(newCode)
-              socket?.emit('code_update', {
-                roomId,
-                userId: user?.id,
-                code: newCode,
-                language,
-              })
-              socket?.emit('opponent_activity', {
-                roomId,
-                activity: 'Typing...',
-              })
-            }}
-          />
+          <div className="relative flex-1 flex flex-col min-h-0">
+            <CodeEditor
+              language={language}
+              code={code}
+              readOnly={isSubmitted}
+              onChange={(val) => {
+                const newCode = val || ''
+                setCode(newCode)
+                socket?.emit('code_update', {
+                  roomId,
+                  userId: user?.id,
+                  code: newCode,
+                  language,
+                })
+                socket?.emit('opponent_activity', {
+                  roomId,
+                  activity: 'Typing...',
+                })
+              }}
+            />
+
+            {/* Locked Overlay after submission */}
+            {isSubmitted && !isEvaluating && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[2px] pointer-events-auto">
+                <div className="bg-card border border-border p-8 rounded-xl shadow-2xl text-center max-w-sm">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-5 border border-green-500/30">
+                    <Check className="text-green-500" size={32} />
+                  </div>
+                  <h3 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-wider text-foreground mb-3">
+                    Code Locked
+                  </h3>
+                  <p className="font-['JetBrains_Mono'] text-sm text-muted-foreground mb-6 leading-relaxed">
+                    You submitted your final solution. You cannot add another
+                    line of code while waiting for your opponent.
+                  </p>
+                  <div className="flex items-center justify-center gap-3 text-accent bg-accent/10 py-2 px-4 rounded-full border border-accent/20 inline-flex">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="font-['JetBrains_Mono'] text-xs uppercase tracking-widest font-bold">
+                      Waiting for opponent...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Run Console at bottom */}
           <RunPanel

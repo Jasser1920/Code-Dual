@@ -197,6 +197,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           avatarUrl: user.avatarUrl,
           preferredLang: user.preferredLang,
           emailVerified: user.emailVerified,
+          xp: user.xp,
+          level: user.level,
         },
       }
     } catch (error) {
@@ -295,6 +297,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           avatarUrl: user.avatarUrl,
           preferredLang: user.preferredLang,
           emailVerified: user.emailVerified,
+          xp: user.xp,
+          level: user.level,
         },
       }
     } catch (error) {
@@ -337,6 +341,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           avatarUrl: user.avatarUrl,
           preferredLang: user.preferredLang,
           emailVerified: user.emailVerified,
+          xp: user.xp,
+          level: user.level,
         },
       }
     } catch (err) {
