@@ -92,7 +92,9 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
             {steps.map((s, index) => (
               <video
                 key={index}
-                ref={(el) => (videoRefs.current[index] = el)}
+                ref={(el) => {
+                  videoRefs.current[index] = el
+                }}
                 src={s.video}
                 muted
                 loop

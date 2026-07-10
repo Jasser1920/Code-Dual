@@ -20,7 +20,6 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import DuelArena from './pages/DuelArena'
 import Profile from './pages/Profile'
-import Leaderboard from './pages/Leaderboard'
 import DuelResult from './pages/DuelResult'
 import { Toaster } from 'sonner'
 import { Analytics } from '@vercel/analytics/react'
@@ -86,7 +85,6 @@ function AppContent() {
           <Route path="/duel/:roomId" element={<DuelArena />} />
           <Route path="/duel/:roomId/result" element={<DuelResult />} />
           {/* Profile & Social */}
-          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile/:username" element={<Profile />} />
         </Routes>
       </div>
