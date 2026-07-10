@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, User, Trophy } from 'lucide-react'
+import { X } from 'lucide-react'
 import axios from 'axios'
 import { CodeEditor } from './editor/CodeEditor'
 
