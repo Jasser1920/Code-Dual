@@ -383,12 +383,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           message: `We sent a recovery link to ${email}`,
         }
       } else if (user && user.githubId) {
-        return reply
-          .status(400)
-          .send({
-            error:
-              'This account uses GitHub login. Please sign in with GitHub.',
-          })
+        return reply.status(400).send({
+          error: 'This account uses GitHub login. Please sign in with GitHub.',
+        })
       } else {
         return reply
           .status(404)

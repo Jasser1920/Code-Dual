@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
-import { Trophy, Swords, Home, RotateCcw } from 'lucide-react'
+import { Trophy, Swords, Home, RotateCcw, Zap } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { useState, useEffect } from 'react'
 
@@ -16,12 +16,74 @@ export default function DuelResult() {
   const [opponentWantsRematch, setOpponentWantsRematch] = useState(false)
 
   // Extract data passed from DuelArena (or fallback to empty strings)
+  const myId = user?.id || location.state?.myId || ''
   const myCode = location.state?.myCode || '// You did not write any code'
   const opponentCode =
     location.state?.opponentCode || '// Opponent did not write any code'
   const status = location.state?.result || 'DRAW' // "VICTORY", "DEFEAT", "DRAW"
   const language = location.state?.language || 'javascript'
   const eloUpdates = location.state?.eloUpdates || {}
+  const rawAnalysis = location.state?.analysis || null
+
+  let analysis = ''
+  if (rawAnalysis && typeof rawAnalysis === 'object') {
+    const myStats = rawAnalysis.p1.id === myId ? rawAnalysis.p1 : rawAnalysis.p2
+    const oppStats =
+      rawAnalysis.p1.id === myId ? rawAnalysis.p2 : rawAnalysis.p1
+
+    if (status === 'VICTORY') {
+      analysis += `You are the WINNER because `
+      if (rawAnalysis.reason === 'score') {
+        analysis += `your code correctness (${myStats.score}/100) was higher than your opponent's (${oppStats.score}/100)!\n`
+      } else if (rawAnalysis.reason === 'time') {
+        analysis += `both of you achieved a perfect score, but your execution time (${myStats.time}ms) was faster than your opponent's (${oppStats.time}ms)!\n`
+      } else if (rawAnalysis.reason === 'forfeit') {
+        analysis += `your opponent abandoned the match.\n`
+      }
+    } else if (status === 'DEFEAT') {
+      analysis += `You are the LOSER because `
+      if (rawAnalysis.reason === 'score') {
+        analysis += `your opponent's code correctness (${oppStats.score}/100) was higher than yours (${myStats.score}/100)!\n`
+      } else if (rawAnalysis.reason === 'time') {
+        analysis += `both of you achieved a perfect score, but your opponent's execution time (${oppStats.time}ms) was faster than yours (${myStats.time}ms)!\n`
+      } else if (rawAnalysis.reason === 'forfeit') {
+        analysis += `you abandoned the match.\n`
+      }
+    } else {
+      analysis += `The match ended in a DRAW because `
+      if (rawAnalysis.reason === 'draw_time') {
+        analysis += `both of you achieved a perfect score and had the EXACT same execution time (${myStats.time}ms)!\n`
+      } else {
+        analysis += `both of you failed to achieve a perfect score (Your score: ${myStats.score}/100).\n`
+      }
+    }
+
+    analysis += `\nAnd here is why:\n`
+
+    // Your code details
+    if (myStats.error) {
+      analysis += `- You had an error in your code:\n  ${myStats.error.split('\n').join('\n  ')}\n`
+    } else if (myStats.score === 100) {
+      analysis += `- Your code passed all tests perfectly!\n`
+    } else {
+      analysis += `- Your code did not pass all the tests.\n`
+    }
+
+    // Opponent details
+    if (oppStats.error) {
+      analysis += `- Your opponent had an error in their code:\n  ${oppStats.error.split('\n').join('\n  ')}\n`
+    } else if (
+      oppStats.score === 100 &&
+      status === 'DEFEAT' &&
+      rawAnalysis.reason === 'time'
+    ) {
+      analysis += `- Your opponent wrote a highly optimized solution that ran faster than yours.\n`
+    } else if (oppStats.score === 100) {
+      analysis += `- Your opponent's code passed all tests perfectly!\n`
+    }
+  } else if (typeof rawAnalysis === 'string') {
+    analysis = rawAnalysis
+  }
 
   const myEloUpdate = user?.id ? eloUpdates[user.id] : null
   const eloDeltaNum = myEloUpdate
@@ -132,6 +194,29 @@ export default function DuelResult() {
             </span>
           </div>
         </div>
+
+        {/* Center Status Badge */}
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-6 py-1 rounded-sm border border-border bg-card transition-opacity duration-1000 delay-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}
+        >
+          {status === 'VICTORY' && (
+            <Trophy size={16} className="text-green-500" />
+          )}
+          {status === 'DEFEAT' && <Swords size={16} className="text-red-500" />}
+          {status === 'DRAW' && (
+            <Swords size={16} className="text-yellow-500" />
+          )}
+          <span
+            className={`font-['Barlow_Condensed'] font-bold text-lg uppercase tracking-widest ${status === 'VICTORY' ? 'text-green-500' : status === 'DEFEAT' ? 'text-red-500' : 'text-yellow-500'}`}
+          >
+            {status === 'VICTORY'
+              ? 'Winner'
+              : status === 'DEFEAT'
+                ? 'Loser'
+                : 'Draw'}
+          </span>
+        </div>
+
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
@@ -168,6 +253,35 @@ export default function DuelResult() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col p-8 overflow-hidden">
+        {/* Neon AI Analysis Section */}
+        {analysis && (
+          <div
+            className={`mb-6 transition-opacity duration-1000 delay-[800ms] ${showSplash ? 'opacity-0' : 'opacity-100'}`}
+          >
+            <div className="relative overflow-hidden rounded-sm border border-border bg-card p-6">
+              <div className="absolute top-0 left-0 w-1 h-full bg-accent"></div>
+              <div className="flex items-start gap-5">
+                <div className="p-4 rounded-sm shrink-0 flex items-center justify-center bg-secondary/50 border border-border">
+                  <Zap className="text-accent" size={28} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-widest text-foreground">
+                      AI System Analysis
+                    </h3>
+                    <div className="px-3 py-1 rounded-sm border border-border bg-secondary font-['JetBrains_Mono'] text-xs font-bold text-muted-foreground">
+                      JUDGE EVALUATION
+                    </div>
+                  </div>
+                  <p className="font-['JetBrains_Mono'] text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                    {analysis}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Side-by-Side Code Comparison */}
         <div
           className={`flex-1 flex gap-4 min-h-0 transition-opacity duration-1000 delay-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}
