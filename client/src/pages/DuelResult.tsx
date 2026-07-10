@@ -59,7 +59,6 @@ export default function DuelResult() {
     }
 
     analysis += `\nAnd here is why:\n`
-
     // Your code details
     if (myStats.error) {
       analysis += `- You had an error in your code:\n  ${myStats.error.split('\n').join('\n  ')}\n`
