@@ -155,7 +155,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           preferredLang: primaryLanguage || 'javascript',
           verificationToken,
           verificationExpires,
-          emailVerified: true, // <-- BYPASS: Set to true automatically so friends can play immediately
+          emailVerified: false, // Must verify via email link
         },
       })
 

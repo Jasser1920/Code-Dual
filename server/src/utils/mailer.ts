@@ -1,8 +1,17 @@
-// We use the Brevo (formerly Sendinblue) HTTP API to bypass Render SMTP blocks.
-// You must provide BREVO_API_KEY in your .env file
-const BREVO_API_KEY = process.env.BREVO_API_KEY
+import nodemailer from 'nodemailer'
 
+const SMTP_EMAIL = process.env.SMTP_EMAIL
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
+
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: SMTP_EMAIL,
+    pass: SMTP_PASSWORD,
+  },
+})
 
 /**
  * Sends a verification email to a newly registered user.
@@ -12,8 +21,12 @@ export const sendVerificationEmail = async (
   username: string,
   token: string
 ) => {
-  const verificationLink = `${CLIENT_URL}/verify-email?token=${token}`
+  if (!SMTP_EMAIL || !SMTP_PASSWORD) {
+    console.warn('SMTP credentials are not set. Skipping verification email.')
+    return
+  }
 
+  const verificationLink = `${CLIENT_URL}/verify-email?token=${token}`
   const now = new Date()
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours
 
@@ -22,56 +35,35 @@ export const sendVerificationEmail = async (
     timeStyle: 'short',
   }
 
-  const mailOptions = {
-    sender: {
-      email: process.env.SMTP_EMAIL || 'nightbleu28@gmail.com',
-      name: 'Code-Dual',
-    },
-    to: [{ email: to }],
-    subject: 'Welcome to Code-Dual! Please verify your email',
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
-        <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
-        <p>Hello <strong>${username}</strong>,</p>
-        <p>Welcome to the arena! Before you can start dueling, please verify your email address (<strong>${to}</strong>).</p>
-        
-        <div style="background-color: #15151c; padding: 15px; margin: 20px 0; border-left: 4px solid #5b4ff0;">
-          <p style="margin: 0 0 5px 0; font-size: 13px;"><strong>Request Time:</strong> ${now.toLocaleString('en-US', dateOpts)}</p>
-          <p style="margin: 0; font-size: 13px;"><strong>Expires At:</strong> ${expiresAt.toLocaleString('en-US', dateOpts)}</p>
-        </div>
-
-        <div style="margin: 30px 0;">
-          <a href="${verificationLink}" style="background-color: #5b4ff0; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
-            Verify Email
-          </a>
-        </div>
-        <p style="font-size: 12px; color: #6b6b7e;">If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="font-size: 12px; color: #6b6b7e; word-break: break-all;">${verificationLink}</p>
-        <hr style="border-color: #1c1c22; margin-top: 30px;" />
-        <p style="font-size: 10px; color: #6b6b7e;">If you did not create an account, no further action is required.</p>
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
+      <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
+      <p>Hello <strong>${username}</strong>,</p>
+      <p>Welcome to the arena! Before you can start dueling, please verify your email address (<strong>${to}</strong>).</p>
+      
+      <div style="background-color: #15151c; padding: 15px; margin: 20px 0; border-left: 4px solid #5b4ff0;">
+        <p style="margin: 0 0 5px 0; font-size: 13px;"><strong>Request Time:</strong> ${now.toLocaleString('en-US', dateOpts)}</p>
+        <p style="margin: 0; font-size: 13px;"><strong>Expires At:</strong> ${expiresAt.toLocaleString('en-US', dateOpts)}</p>
       </div>
-    `,
-  }
 
-  if (!BREVO_API_KEY) {
-    console.warn('BREVO_API_KEY is not set. Skipping email send.')
-    return
-  }
+      <div style="margin: 30px 0;">
+        <a href="${verificationLink}" style="background-color: #5b4ff0; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
+          Verify Email
+        </a>
+      </div>
+      <p style="font-size: 12px; color: #6b6b7e;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="font-size: 12px; color: #6b6b7e; word-break: break-all;">${verificationLink}</p>
+      <hr style="border-color: #1c1c22; margin-top: 30px;" />
+      <p style="font-size: 10px; color: #6b6b7e;">If you did not create an account, no further action is required.</p>
+    </div>
+  `
 
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'api-key': BREVO_API_KEY,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(mailOptions),
+  await transporter.sendMail({
+    from: `"Code-Dual" <${SMTP_EMAIL}>`,
+    to,
+    subject: 'Welcome to Code-Dual! Please verify your email',
+    html: htmlContent,
   })
-
-  if (!response.ok) {
-    const errorData = await response.text()
-    throw new Error(`Brevo API Error: ${errorData}`)
-  }
 }
 
 /**
@@ -82,8 +74,12 @@ export const sendPasswordResetEmail = async (
   username: string,
   token: string
 ) => {
-  const resetLink = `${CLIENT_URL}/reset-password?token=${token}`
+  if (!SMTP_EMAIL || !SMTP_PASSWORD) {
+    console.warn('SMTP credentials are not set. Skipping password reset email.')
+    return
+  }
 
+  const resetLink = `${CLIENT_URL}/reset-password?token=${token}`
   const now = new Date()
   const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour
 
@@ -92,54 +88,33 @@ export const sendPasswordResetEmail = async (
     timeStyle: 'short',
   }
 
-  const mailOptions = {
-    sender: {
-      email: process.env.SMTP_EMAIL || 'nightbleu28@gmail.com',
-      name: 'Code-Dual Support',
-    },
-    to: [{ email: to }],
-    subject: 'Code-Dual: Password Reset Request',
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
-        <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
-        <p>Hello <strong>${username}</strong>,</p>
-        <p>You requested a password reset for the account associated with <strong>${to}</strong>. Click the button below to choose a new password.</p>
-        
-        <div style="background-color: #15151c; padding: 15px; margin: 20px 0; border-left: 4px solid #5b4ff0;">
-          <p style="margin: 0 0 5px 0; font-size: 13px;"><strong>Request Time:</strong> ${now.toLocaleString('en-US', dateOpts)}</p>
-          <p style="margin: 0; font-size: 13px; color: #ff5555;"><strong>Link Expires At:</strong> ${expiresAt.toLocaleString('en-US', dateOpts)}</p>
-        </div>
-
-        <div style="margin: 30px 0;">
-          <a href="${resetLink}" style="background-color: #5b4ff0; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
-            Reset Password
-          </a>
-        </div>
-        <p style="font-size: 12px; color: #6b6b7e;">If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="font-size: 12px; color: #6b6b7e; word-break: break-all;">${resetLink}</p>
-        <hr style="border-color: #1c1c22; margin-top: 30px;" />
-        <p style="font-size: 10px; color: #6b6b7e;">If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0c0c0f; color: #e8e8f0; border: 1px solid #1c1c22;">
+      <h2 style="color: #5b4ff0; text-transform: uppercase;">Code-Dual</h2>
+      <p>Hello <strong>${username}</strong>,</p>
+      <p>You requested a password reset for the account associated with <strong>${to}</strong>. Click the button below to choose a new password.</p>
+      
+      <div style="background-color: #15151c; padding: 15px; margin: 20px 0; border-left: 4px solid #5b4ff0;">
+        <p style="margin: 0 0 5px 0; font-size: 13px;"><strong>Request Time:</strong> ${now.toLocaleString('en-US', dateOpts)}</p>
+        <p style="margin: 0; font-size: 13px; color: #ff5555;"><strong>Link Expires At:</strong> ${expiresAt.toLocaleString('en-US', dateOpts)}</p>
       </div>
-    `,
-  }
 
-  if (!BREVO_API_KEY) {
-    console.warn('BREVO_API_KEY is not set. Skipping password reset email.')
-    return
-  }
+      <div style="margin: 30px 0;">
+        <a href="${resetLink}" style="background-color: #5b4ff0; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
+          Reset Password
+        </a>
+      </div>
+      <p style="font-size: 12px; color: #6b6b7e;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="font-size: 12px; color: #6b6b7e; word-break: break-all;">${resetLink}</p>
+      <hr style="border-color: #1c1c22; margin-top: 30px;" />
+      <p style="font-size: 10px; color: #6b6b7e;">If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+    </div>
+  `
 
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'api-key': BREVO_API_KEY,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(mailOptions),
+  await transporter.sendMail({
+    from: `"Code-Dual Support" <${SMTP_EMAIL}>`,
+    to,
+    subject: 'Code-Dual: Password Reset Request',
+    html: htmlContent,
   })
-
-  if (!response.ok) {
-    const errorData = await response.text()
-    throw new Error(`Brevo API Error: ${errorData}`)
-  }
 }
