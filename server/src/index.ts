@@ -21,10 +21,7 @@ const app = Fastify({ logger: true })
 
 // Register plugins
 await app.register(cors, {
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    'https://code-dual-client-git-main-jasser1920s-projects.vercel.app',
-  ],
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 })
