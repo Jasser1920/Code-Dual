@@ -1,17 +1,10 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-const SMTP_EMAIL = process.env.SMTP_EMAIL
-const SMTP_PASSWORD = process.env.SMTP_PASSWORD
+// We will use RESEND_API_KEY instead of SMTP credentials
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
-
-// Configure Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: SMTP_EMAIL,
-    pass: SMTP_PASSWORD,
-  },
-})
 
 /**
  * Sends a verification email to a newly registered user.
@@ -21,8 +14,8 @@ export const sendVerificationEmail = async (
   username: string,
   token: string
 ) => {
-  if (!SMTP_EMAIL || !SMTP_PASSWORD) {
-    console.warn('SMTP credentials are not set. Skipping verification email.')
+  if (!resend) {
+    console.warn('RESEND_API_KEY is not set. Skipping verification email.')
     return
   }
 
@@ -58,12 +51,20 @@ export const sendVerificationEmail = async (
     </div>
   `
 
-  await transporter.sendMail({
-    from: `"Code-Dual" <${SMTP_EMAIL}>`,
-    to,
-    subject: 'Welcome to Code-Dual! Please verify your email',
-    html: htmlContent,
-  })
+  try {
+    const { error } = await resend.emails.send({
+      from: 'Code-Dual <onboarding@resend.dev>', // Resend requires this exact email for free accounts
+      to,
+      subject: 'Welcome to Code-Dual! Please verify your email',
+      html: htmlContent,
+    })
+
+    if (error) {
+      console.error('Resend API Error:', error)
+    }
+  } catch (error) {
+    console.error('Failed to send Resend email:', error)
+  }
 }
 
 /**
@@ -74,8 +75,8 @@ export const sendPasswordResetEmail = async (
   username: string,
   token: string
 ) => {
-  if (!SMTP_EMAIL || !SMTP_PASSWORD) {
-    console.warn('SMTP credentials are not set. Skipping password reset email.')
+  if (!resend) {
+    console.warn('RESEND_API_KEY is not set. Skipping password reset email.')
     return
   }
 
@@ -111,10 +112,18 @@ export const sendPasswordResetEmail = async (
     </div>
   `
 
-  await transporter.sendMail({
-    from: `"Code-Dual Support" <${SMTP_EMAIL}>`,
-    to,
-    subject: 'Code-Dual: Password Reset Request',
-    html: htmlContent,
-  })
+  try {
+    const { error } = await resend.emails.send({
+      from: 'Code-Dual Support <onboarding@resend.dev>', // Resend requires this exact email for free accounts
+      to,
+      subject: 'Code-Dual: Password Reset Request',
+      html: htmlContent,
+    })
+
+    if (error) {
+      console.error('Resend API Error:', error)
+    }
+  } catch (error) {
+    console.error('Failed to send Resend email:', error)
+  }
 }

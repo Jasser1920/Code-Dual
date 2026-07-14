@@ -33,6 +33,7 @@
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
     "prisma": "^6.19.3",
+    "resend": "^6.17.2",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
