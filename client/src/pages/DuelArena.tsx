@@ -7,18 +7,9 @@ import { LanguageSelector } from '../components/editor/LanguageSelector'
 import { ProblemPanel } from '../components/editor/ProblemPanel'
 import type { Problem } from '../components/editor/ProblemPanel'
 import { RunPanel } from '../components/editor/RunPanel'
-import {
-  ArrowLeft,
-  Clock,
-  Loader2,
-  Check,
-  Zap,
-  AlertTriangle,
-} from 'lucide-react'
+import { ArrowLeft, Clock, Loader2, Check, AlertTriangle } from 'lucide-react'
 import axios from 'axios'
 import { JUDGE0_LANGUAGE_IDS } from '../utils/judge0'
-import { toast } from 'sonner'
-
 // Mock Problem Data
 const MOCK_PROBLEM: Problem = {
   title: 'Two Sum',
@@ -79,7 +70,7 @@ export default function DuelArena() {
   const [currentActivity, setCurrentActivity] = useState<string | null>(null)
   const [activityVisible, setActivityVisible] = useState(false)
 
-  const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const activityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [remainingTime, setRemainingTime] = useState(15 * 60)
 
