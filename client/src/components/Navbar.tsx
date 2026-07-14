@@ -5,7 +5,6 @@ import {
   Code2,
   Home,
   ChevronDown,
-  Settings,
   Edit3,
   LogOut,
   AlertTriangle,
@@ -175,16 +174,6 @@ export default function Navbar() {
                 >
                   <User size={14} className="text-muted-foreground" /> My
                   Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false)
-                    navigate('/settings')
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/80 flex items-center gap-3 font-['JetBrains_Mono'] transition-colors"
-                >
-                  <Settings size={14} className="text-muted-foreground" />{' '}
-                  Settings
                 </button>
                 <button
                   onClick={() => {

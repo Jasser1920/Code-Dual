@@ -55,11 +55,22 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
     })
   }, [step])
 
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+
+  const handleClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('code_dual_onboarding_seen', 'true')
+    } else {
+      localStorage.removeItem('code_dual_onboarding_seen')
+    }
+    onClose()
+  }
+
   const handleNext = () => {
     if (step < steps.length - 1) {
       setStep(step + 1)
     } else {
-      onClose()
+      handleClose()
     }
   }
 
@@ -78,7 +89,7 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
             Welcome to Code-Dual
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X size={24} />
@@ -120,22 +131,39 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
               </p>
             </div>
 
-            <div className="mt-8 flex items-center justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePrev}
-                disabled={step === 0}
-                className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest"
-              >
-                <ChevronLeft size={16} className="mr-1" /> Back
-              </Button>
-              <Button
-                onClick={handleNext}
-                className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                {step === steps.length - 1 ? 'Start Coding!' : 'Next'}{' '}
-                <ChevronRight size={16} className="ml-1" />
-              </Button>
+            <div className="mt-8 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="dontShowAgain"
+                  checked={dontShowAgain}
+                  onChange={(e) => setDontShowAgain(e.target.checked)}
+                  className="w-4 h-4 rounded border-border bg-background accent-accent cursor-pointer"
+                />
+                <label
+                  htmlFor="dontShowAgain"
+                  className="font-['JetBrains_Mono'] text-xs text-muted-foreground cursor-pointer select-none"
+                >
+                  Don't show this again
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handlePrev}
+                  disabled={step === 0}
+                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest"
+                >
+                  <ChevronLeft size={16} className="mr-1" /> Back
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  {step === steps.length - 1 ? 'Start Coding!' : 'Next'}{' '}
+                  <ChevronRight size={16} className="ml-1" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>

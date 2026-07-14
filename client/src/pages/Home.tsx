@@ -122,7 +122,6 @@ export default function Home() {
   }, [isAuthenticated])
 
   const handleCloseOnboarding = () => {
-    localStorage.setItem('code_dual_onboarding_seen', 'true')
     setShowOnboarding(false)
   }
 

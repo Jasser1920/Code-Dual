@@ -13,7 +13,6 @@ import Register from './pages/Register'
 import Home from './pages/Home'
 import AuthSuccess from './pages/AuthSuccess'
 import ProfileEdit from './pages/ProfileEdit'
-import Settings from './pages/Settings'
 import Navbar from './components/Navbar'
 import VerifyEmail from './pages/VerifyEmail'
 import ForgotPassword from './pages/ForgotPassword'
@@ -77,7 +76,6 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/auth-success" element={<AuthSuccess />} />
           <Route path="/profile/edit" element={<ProfileEdit />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />

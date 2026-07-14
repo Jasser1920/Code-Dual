@@ -61,7 +61,10 @@ interface RoomState {
 export function setupSocket(app: FastifyInstance) {
   const io = new Server(app.server, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:5173',
+      origin: [
+        process.env.CLIENT_URL || 'http://localhost:5173',
+        'https://code-dual-client-git-main-jasser1920s-projects.vercel.app',
+      ],
       methods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
     },
@@ -458,6 +461,25 @@ export function setupSocket(app: FastifyInstance) {
 
           io.to(roomId).emit('duel_start')
         }
+
+        if (room.players.size === 2) {
+          try {
+            const pArray = Array.from(room.players.values())
+            const users = await prisma.user.findMany({
+              where: { id: { in: [pArray[0].userId, pArray[1].userId] } },
+              select: { id: true, username: true, elo: true, avatarUrl: true },
+            })
+            const u1 = users.find((u) => u.id === pArray[0].userId)
+            const u2 = users.find((u) => u.id === pArray[1].userId)
+
+            if (u1 && u2) {
+              io.to(pArray[0].socketId).emit('opponent_info', u2)
+              io.to(pArray[1].socketId).emit('opponent_info', u1)
+            }
+          } catch (e) {
+            console.error('Failed to fetch opponent info', e)
+          }
+        }
       }
       socket.to(roomId).emit('opponent_joined')
     })
@@ -499,6 +521,14 @@ export function setupSocket(app: FastifyInstance) {
           .to(roomId)
           .emit('opponent_activity', 'Submitted Code! Waiting for you...')
       }
+    })
+
+    socket.on('forfeit', ({ roomId, userId }) => {
+      const room = activeRooms.get(roomId)
+      if (!room || !userId) return
+
+      // The user who emitted forfeit is the one forfeiting
+      endDuelAndEvaluate(roomId, room, userId)
     })
 
     socket.on('request_rematch', ({ oldRoomId, userId }) => {

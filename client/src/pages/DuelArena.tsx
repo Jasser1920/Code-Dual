@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
@@ -7,7 +7,14 @@ import { LanguageSelector } from '../components/editor/LanguageSelector'
 import { ProblemPanel } from '../components/editor/ProblemPanel'
 import type { Problem } from '../components/editor/ProblemPanel'
 import { RunPanel } from '../components/editor/RunPanel'
-import { ArrowLeft, Clock, Loader2, Check } from 'lucide-react'
+import {
+  ArrowLeft,
+  Clock,
+  Loader2,
+  Check,
+  Zap,
+  AlertTriangle,
+} from 'lucide-react'
 import axios from 'axios'
 import { JUDGE0_LANGUAGE_IDS } from '../utils/judge0'
 import { toast } from 'sonner'
@@ -57,8 +64,22 @@ export default function DuelArena() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isEvaluating, setIsEvaluating] = useState(false)
 
+  const [showForfeitModal, setShowForfeitModal] = useState(false)
+  const [isForfeiting, setIsForfeiting] = useState(false)
+
   const [opponentJoined, setOpponentJoined] = useState(false)
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false)
+  const [opponentSubmitted, setOpponentSubmitted] = useState(false)
   const [opponentCode, setOpponentCode] = useState('')
+  const [opponentProfile, setOpponentProfile] = useState<{
+    username: string
+    elo: number
+    avatarUrl: string | null
+  } | null>(null)
+  const [currentActivity, setCurrentActivity] = useState<string | null>(null)
+  const [activityVisible, setActivityVisible] = useState(false)
+
+  const activityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [remainingTime, setRemainingTime] = useState(15 * 60)
 
@@ -74,6 +95,7 @@ export default function DuelArena() {
 
     socket.on('opponent_joined', () => {
       setOpponentJoined(true)
+      setOpponentDisconnected(false)
     })
 
     socket.on('code_update', (newCode: string) => {
@@ -82,27 +104,38 @@ export default function DuelArena() {
 
     socket.on('duel_start', () => {
       setOpponentJoined(true)
+      setOpponentDisconnected(false)
     })
 
     socket.on('timer_tick', ({ remaining }) => {
       setRemainingTime(remaining)
     })
 
+    socket.on('opponent_info', (info: any) => {
+      setOpponentProfile(info)
+    })
+
     socket.on('opponent_activity', (activity: string | null) => {
       if (activity) {
-        toast(
-          <div className="flex flex-col font-['JetBrains_Mono']">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              Opponent Action
-            </span>
-            <span className="text-sm text-accent font-bold animate-pulse">
-              {activity}
-            </span>
-          </div>,
-          {
-            id: 'opponent-activity',
-            duration: activity === 'Typing...' ? 1500 : 4000,
-          }
+        if (activity.includes('Submitted Code')) {
+          setOpponentSubmitted(true)
+        }
+        if (activity.includes('Opponent disconnected')) {
+          setOpponentDisconnected(true)
+        }
+
+        setCurrentActivity(activity)
+        setActivityVisible(true)
+
+        if (activityTimeoutRef.current) {
+          clearTimeout(activityTimeoutRef.current)
+        }
+
+        activityTimeoutRef.current = setTimeout(
+          () => {
+            setActivityVisible(false)
+          },
+          activity === 'Typing...' ? 1500 : 4000
         )
       }
     })
@@ -241,7 +274,66 @@ export default function DuelArena() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden relative">
+    <div
+      className={`h-screen flex flex-col bg-background overflow-hidden relative transition-all duration-300 ${
+        opponentSubmitted
+          ? 'border-[6px] border-destructive shadow-[inset_0_0_80px_rgba(220,38,38,0.5)]'
+          : ''
+      }`}
+    >
+      {/* Custom Forfeit Modal */}
+      {showForfeitModal && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
+          <div className="bg-card border border-destructive/50 shadow-[0_0_30px_rgba(220,38,38,0.15)] rounded-sm max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+            {isForfeiting ? (
+              <div className="flex flex-col items-center py-6">
+                <h3 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-widest text-destructive mb-6">
+                  Leaving...
+                </h3>
+                <div className="w-full h-1.5 bg-secondary overflow-hidden rounded-none relative">
+                  <div className="absolute inset-y-0 left-0 bg-destructive w-full animate-pulse"></div>
+                </div>
+                <p className="mt-4 font-['JetBrains_Mono'] text-xs text-muted-foreground uppercase tracking-widest">
+                  Processing Forfeit
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-4 text-destructive">
+                  <AlertTriangle size={24} />
+                  <h3 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-widest">
+                    Forfeit Match?
+                  </h3>
+                </div>
+                <p className="font-['JetBrains_Mono'] text-sm text-muted-foreground mb-8 leading-relaxed">
+                  If you leave this match, it will be recorded as a forfeit and
+                  you will automatically{' '}
+                  <strong className="text-foreground">lose the match</strong>{' '}
+                  and drop in rating. Are you sure?
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowForfeitModal(false)}
+                    className="px-4 py-2 font-['Barlow_Condensed'] uppercase tracking-widest font-bold text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsForfeiting(true)
+                      socket?.emit('forfeit', { roomId, userId: user?.id })
+                    }}
+                    className="px-6 py-2 bg-destructive text-destructive-foreground font-['Barlow_Condensed'] uppercase tracking-widest font-bold rounded-sm hover:bg-destructive/90 transition-colors"
+                  >
+                    Yes, Forfeit
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Evaluation Loading Overlay */}
       {isEvaluating && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
@@ -263,8 +355,9 @@ export default function DuelArena() {
       <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/')}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setShowForfeitModal(true)}
+            className="text-muted-foreground hover:text-destructive transition-colors"
+            title="Forfeit Match"
           >
             <ArrowLeft size={18} />
           </button>
@@ -279,8 +372,17 @@ export default function DuelArena() {
         </div>
 
         <div className="flex flex-col items-center">
-          <div className="flex items-center gap-2 text-accent font-['JetBrains_Mono'] text-xl font-bold">
-            <Clock size={18} />
+          <div
+            className={`flex items-center gap-2 font-['JetBrains_Mono'] text-xl font-bold transition-colors duration-300 ${
+              opponentSubmitted
+                ? 'text-destructive animate-pulse scale-110'
+                : 'text-accent'
+            }`}
+          >
+            <Clock
+              size={18}
+              className={opponentSubmitted ? 'animate-pulse' : ''}
+            />
             {formatTime(remainingTime)}
           </div>
         </div>
@@ -289,13 +391,21 @@ export default function DuelArena() {
           {roomId && (
             <div className="flex items-center gap-2">
               <span
-                className={`w-2 h-2 rounded-full animate-pulse ${opponentJoined ? 'bg-green-500' : 'bg-yellow-500'}`}
+                className={`w-2 h-2 rounded-full animate-pulse ${
+                  !opponentJoined
+                    ? 'bg-yellow-500'
+                    : opponentDisconnected
+                      ? 'bg-destructive'
+                      : 'bg-green-500'
+                }`}
               />
               <div className="flex flex-col">
                 <span className="font-['JetBrains_Mono'] text-xs text-muted-foreground">
-                  {opponentJoined
-                    ? 'Opponent Ready'
-                    : 'Waiting for Opponent...'}
+                  {!opponentJoined
+                    ? 'Waiting for Opponent...'
+                    : opponentDisconnected
+                      ? 'Opponent Disconnected'
+                      : 'Opponent Ready'}
                 </span>
               </div>
             </div>
@@ -303,28 +413,44 @@ export default function DuelArena() {
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <div className="font-['JetBrains_Mono'] text-sm text-foreground">
-                {user?.username || 'You'}
+                {opponentProfile?.username || 'Waiting...'}
               </div>
               <div className="font-['JetBrains_Mono'] text-xs text-accent">
-                Rating: {user?.elo || 1000}
+                Rating: {opponentProfile?.elo || '-'}
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-border">
-              {user?.avatarUrl ? (
+            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-border shrink-0">
+              {opponentProfile?.avatarUrl ? (
                 <img
-                  src={user.avatarUrl}
+                  src={opponentProfile.avatarUrl}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">
-                  {(user?.username || 'U').charAt(0)}
+                  {(opponentProfile?.username || '?').charAt(0)}
                 </div>
               )}
             </div>
           </div>
         </div>
       </header>
+
+      {/* Custom Slider Notification */}
+      <div
+        className={`absolute top-16 right-4 z-40 bg-card border border-border rounded-sm shadow-md px-4 py-2 transition-all duration-300 ease-in-out flex items-center gap-2 ${
+          activityVisible && currentActivity
+            ? 'translate-y-0 opacity-100'
+            : '-translate-y-4 opacity-0 pointer-events-none'
+        }`}
+      >
+        <span className="font-['JetBrains_Mono'] text-sm font-bold text-accent tracking-widest uppercase">
+          Opponent Action:{' '}
+          <span className="text-foreground font-normal normal-case">
+            {currentActivity}
+          </span>
+        </span>
+      </div>
 
       {/* Main Split Screen */}
       <div className="flex-1 flex overflow-hidden">

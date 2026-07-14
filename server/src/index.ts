@@ -21,7 +21,10 @@ const app = Fastify({ logger: true })
 
 // Register plugins
 await app.register(cors, {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'https://code-dual-client-git-main-jasser1920s-projects.vercel.app',
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 })
@@ -65,7 +68,7 @@ const start = async () => {
       port: Number(process.env.PORT) || 4000,
       host: '0.0.0.0',
     })
-    console.log('🚀 Server running on http://localhost:4000')
+    console.log(' Server running on http://localhost:4000')
   } catch (err) {
     app.log.error(err)
     process.exit(1)
