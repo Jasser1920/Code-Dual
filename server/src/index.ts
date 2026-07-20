@@ -8,11 +8,13 @@ import dotenv from 'dotenv'
 import type { UserProfile, DuelStatus } from '@code-dual/shared'
 
 import authPlugin from './plugins/auth.js'
+import fastifyMetrics from 'fastify-metrics'
 import authRoutes from './routes/auth.js'
 import profileRoutes from './routes/profile.js'
 import executeRoutes from './routes/execute.js'
 import usersRoutes from './routes/users.js'
 import duelsRoutes from './routes/duels.js'
+import adminRoutes from './routes/admin.js'
 import { setupSocket } from './socket.js'
 
 dotenv.config()
@@ -24,6 +26,10 @@ await app.register(cors, {
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+})
+
+await app.register(fastifyMetrics, {
+  endpoint: '/metrics',
 })
 
 await app.register(jwt, {
@@ -49,6 +55,7 @@ app.register(profileRoutes, { prefix: '/profile' })
 app.register(executeRoutes, { prefix: '/execute' })
 app.register(usersRoutes, { prefix: '/users' })
 app.register(duelsRoutes, { prefix: '/duels' })
+app.register(adminRoutes, { prefix: '/admin' })
 
 // Health check route
 app.get('/health', async () => {

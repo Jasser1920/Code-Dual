@@ -20,6 +20,9 @@ import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
 import axios from 'axios'
 import OnboardingModal from '../components/OnboardingModal'
+import MatchmakingFlow, {
+  type MatchState,
+} from '../components/matchmaking/MatchmakingFlow'
 
 function DuelMockup() {
   return (
@@ -111,7 +114,7 @@ export default function Home() {
   const { isProfileComplete, isAuthenticated, user } = useAuthStore()
   const { socket, connect } = useSocketStore()
   const [showBlockModal, setShowBlockModal] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
+  const [matchState, setMatchState] = useState<MatchState>('IDLE')
   const [topPlayers, setTopPlayers] = useState<any[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -141,20 +144,13 @@ export default function Home() {
   useEffect(() => {
     if (!socket) return
 
-    const handleMatchFound = (data: { roomId: string }) => {
-      setIsSearching(false)
-      navigate(`/duel/${data.roomId}`)
-    }
-
     const handlePrivateRoomCreated = (data: { roomId: string }) => {
       navigate(`/duel/${data.roomId}`)
     }
 
-    socket.on('match_found', handleMatchFound)
     socket.on('private_room_created', handlePrivateRoomCreated)
 
     return () => {
-      socket.off('match_found', handleMatchFound)
       socket.off('private_room_created', handlePrivateRoomCreated)
     }
   }, [socket, navigate])
@@ -169,7 +165,7 @@ export default function Home() {
     }
 
     // Start matchmaking
-    setIsSearching(true)
+    setMatchState('SEARCHING')
     connect()
     // We use a small timeout to ensure socket connects before emitting, or we can emit immediately if connected.
     // useSocketStore's connect is synchronous in returning, but actual connection is async.
@@ -197,7 +193,7 @@ export default function Home() {
   }
 
   const handleCancelSearch = () => {
-    setIsSearching(false)
+    setMatchState('IDLE')
     socket?.emit('leave_queue')
   }
 
@@ -573,25 +569,7 @@ export default function Home() {
       </section>
 
       {/* Matchmaking Overlay */}
-      {isSearching && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-md">
-          <div className="flex flex-col items-center text-center">
-            <Loader2 size={48} className="text-accent animate-spin mb-6" />
-            <h2 className="font-['Barlow_Condensed'] font-extrabold text-3xl uppercase tracking-widest text-foreground mb-2">
-              Searching for Opponent...
-            </h2>
-            <p className="font-['Barlow'] text-sm text-muted-foreground mb-8">
-              Waiting for another player to join the queue.
-            </p>
-            <button
-              onClick={handleCancelSearch}
-              className="border border-border text-muted-foreground hover:text-foreground font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm px-8 py-3 transition-colors"
-            >
-              Cancel Search
-            </button>
-          </div>
-        </div>
-      )}
+      <MatchmakingFlow matchState={matchState} setMatchState={setMatchState} />
 
       {/* Duel Block Modal */}
       {showBlockModal && (

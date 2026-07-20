@@ -56,7 +56,19 @@ interface RoomState {
   players: Map<string, PlayerState>
   isProcessing: boolean
   hasStarted: boolean
+  status: 'WAITING_ACCEPT' | 'PROBLEM_SELECTION' | 'ROULETTE' | 'IN_GAME'
+  lobbyProblems: any[]
+  playerAccepted: Set<string>
+  playerSelections: Map<string, string[]>
+  finalProblemId: string | null
 }
+
+export let globalSocketStats = {
+  activePlayers: 0,
+  waitingPlayers: 0,
+  activeDuels: 0,
+}
+export const activeRooms = new Map<string, RoomState>()
 
 export function setupSocket(app: FastifyInstance) {
   const io = new Server(app.server, {
@@ -90,7 +102,6 @@ export function setupSocket(app: FastifyInstance) {
 
   // Simple in-memory state
   let waitingPlayer: any = null // store object { socket, userId }
-  const activeRooms = new Map<string, RoomState>()
   const rematchRequests = new Map<string, Set<string>>() // stores userIds
 
   // Helper to get room by socket.id
@@ -364,6 +375,10 @@ export function setupSocket(app: FastifyInstance) {
         io.to(roomId).emit('timer_tick', { remaining: room.remainingTime })
       }
     }
+
+    globalSocketStats.activePlayers = io.engine.clientsCount
+    globalSocketStats.waitingPlayers = waitingPlayer ? 1 : 0
+    globalSocketStats.activeDuels = activeRooms.size
   }, 1000)
 
   io.on('connection', (socket) => {
@@ -372,19 +387,72 @@ export function setupSocket(app: FastifyInstance) {
 
       if (waitingPlayer && waitingPlayer.userId !== userId) {
         const roomId = crypto.randomUUID()
+        const p1 = waitingPlayer
+        const p2 = { socket, userId }
+        waitingPlayer = null
 
         activeRooms.set(roomId, {
           id: roomId,
           dbDuelId: null, // Will be set on start
+          status: 'WAITING_ACCEPT',
           remainingTime: DUEL_DURATION_SEC,
-          players: new Map(),
+          players: new Map([
+            [
+              p1.userId,
+              {
+                socketId: p1.socket.id,
+                userId: p1.userId,
+                code: '',
+                language: 'javascript',
+                hasSubmitted: false,
+                disconnectedAt: null,
+              },
+            ],
+            [
+              p2.userId,
+              {
+                socketId: p2.socket.id,
+                userId: p2.userId,
+                code: '',
+                language: 'javascript',
+                hasSubmitted: false,
+                disconnectedAt: null,
+              },
+            ],
+          ]),
           isProcessing: false,
           hasStarted: false,
+          lobbyProblems: [],
+          playerAccepted: new Set(),
+          playerSelections: new Map(),
+          finalProblemId: null,
         })
 
         socket.emit('match_found', { roomId })
-        waitingPlayer.socket.emit('match_found', { roomId })
-        waitingPlayer = null
+        p1.socket.emit('match_found', { roomId })
+
+        // 10s wait for accept
+        setTimeout(() => {
+          const room = activeRooms.get(roomId)
+          if (room && room.status === 'WAITING_ACCEPT') {
+            io.to(room.players.get(p1.userId)?.socketId || '').emit(
+              'match_aborted'
+            )
+            io.to(room.players.get(p2.userId)?.socketId || '').emit(
+              'match_aborted'
+            )
+
+            // Requeue players who DID accept
+            for (const p of room.players.values()) {
+              if (room.playerAccepted.has(p.userId)) {
+                const s = io.sockets.sockets.get(p.socketId)
+                if (s && !waitingPlayer)
+                  waitingPlayer = { socket: s, userId: p.userId }
+              }
+            }
+            activeRooms.delete(roomId)
+          }
+        }, 10000)
       } else {
         waitingPlayer = { socket, userId }
       }
@@ -393,6 +461,120 @@ export function setupSocket(app: FastifyInstance) {
     socket.on('leave_queue', () => {
       if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
         waitingPlayer = null
+      }
+    })
+
+    socket.on('accept_match', async ({ roomId, userId }) => {
+      const room = activeRooms.get(roomId)
+      if (room && room.status === 'WAITING_ACCEPT') {
+        room.playerAccepted.add(userId)
+
+        if (room.playerAccepted.size === 2) {
+          room.status = 'PROBLEM_SELECTION'
+
+          try {
+            const problems = await prisma.problem.findMany()
+            const shuffled = problems
+              .sort(() => 0.5 - Math.random())
+              .slice(0, 5)
+            room.lobbyProblems = shuffled
+
+            for (const p of room.players.values()) {
+              io.to(p.socketId).emit('lobby_start', {
+                roomId,
+                problems: shuffled,
+              })
+            }
+
+            let timeLeft = 30
+            const lobbyInterval = setInterval(() => {
+              timeLeft--
+              for (const p of room.players.values()) {
+                io.to(p.socketId).emit('lobby_timer', { remaining: timeLeft })
+              }
+
+              let bothLocked = true
+              for (const pid of room.players.keys()) {
+                const selections = room.playerSelections.get(pid) || []
+                if (selections.length < 3) bothLocked = false
+              }
+
+              if (timeLeft <= 0 || bothLocked) {
+                clearInterval(lobbyInterval)
+                if (room.status !== 'PROBLEM_SELECTION') return
+                room.status = 'ROULETTE'
+
+                const allSelections = []
+                for (const sels of room.playerSelections.values()) {
+                  allSelections.push(...sels)
+                }
+
+                let finalId = null
+                if (allSelections.length === 0) {
+                  const randProblem =
+                    room.lobbyProblems[
+                      Math.floor(Math.random() * room.lobbyProblems.length)
+                    ]
+                  finalId = randProblem.id
+                } else {
+                  finalId =
+                    allSelections[
+                      Math.floor(Math.random() * allSelections.length)
+                    ]
+                }
+                room.finalProblemId = finalId
+
+                for (const p of room.players.values()) {
+                  io.to(p.socketId).emit('roulette_start', {
+                    finalProblemId: finalId,
+                  })
+                }
+
+                setTimeout(() => {
+                  room.status = 'IN_GAME'
+                  for (const p of room.players.values()) {
+                    io.to(p.socketId).emit('duel_ready', {
+                      problemId: finalId,
+                      roomId,
+                    })
+                  }
+                }, 5000)
+              }
+            }, 1000)
+          } catch (e) {
+            console.error('Failed to start lobby', e)
+          }
+        }
+      }
+    })
+
+    socket.on('reject_match', ({ roomId, userId }) => {
+      const room = activeRooms.get(roomId)
+      if (room && room.status === 'WAITING_ACCEPT') {
+        for (const p of room.players.values()) {
+          io.to(p.socketId).emit('match_aborted')
+          if (p.userId !== userId) {
+            const s = io.sockets.sockets.get(p.socketId)
+            if (s && !waitingPlayer)
+              waitingPlayer = { socket: s, userId: p.userId }
+          }
+        }
+        activeRooms.delete(roomId)
+      }
+    })
+
+    socket.on('select_problem', ({ roomId, userId, problemIds }) => {
+      const room = activeRooms.get(roomId)
+      if (room && room.status === 'PROBLEM_SELECTION') {
+        const limited = problemIds.slice(0, 3)
+        room.playerSelections.set(userId, limited)
+        for (const p of room.players.values()) {
+          if (p.userId !== userId) {
+            io.to(p.socketId).emit('opponent_selection_update', {
+              count: limited.length,
+            })
+          }
+        }
       }
     })
 
@@ -438,14 +620,14 @@ export function setupSocket(app: FastifyInstance) {
           room.hasStarted = true
 
           // Create Duel in DB
-          if (mockProblemId) {
+          if (room.finalProblemId || mockProblemId) {
             try {
               const pArray = Array.from(room.players.values())
               const dbDuel = await prisma.duel.create({
                 data: {
                   player1Id: pArray[0].userId,
                   player2Id: pArray[1].userId,
-                  problemId: mockProblemId,
+                  problemId: room.finalProblemId || mockProblemId || '',
                   status: 'ongoing',
                   startedAt: new Date(),
                 },
@@ -544,10 +726,15 @@ export function setupSocket(app: FastifyInstance) {
         activeRooms.set(newRoomId, {
           id: newRoomId,
           dbDuelId: null,
+          status: 'IN_GAME',
           remainingTime: DUEL_DURATION_SEC,
           players: new Map(),
           isProcessing: false,
           hasStarted: false,
+          lobbyProblems: [],
+          playerAccepted: new Set(),
+          playerSelections: new Map(),
+          finalProblemId: null,
         })
 
         io.to(oldRoomId).emit('rematch_accepted', { newRoomId })
@@ -560,10 +747,15 @@ export function setupSocket(app: FastifyInstance) {
       activeRooms.set(roomId, {
         id: roomId,
         dbDuelId: null,
+        status: 'IN_GAME',
         remainingTime: DUEL_DURATION_SEC,
         players: new Map(),
         isProcessing: false,
         hasStarted: false,
+        lobbyProblems: [],
+        playerAccepted: new Set(),
+        playerSelections: new Map(),
+        finalProblemId: null,
       })
       socket.emit('private_room_created', { roomId })
     })

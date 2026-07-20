@@ -1,11 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 import { prisma } from '../db.js'
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from '../utils/mailer.js'
+import { checkIsAdmin } from '../plugins/admin.js'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const CLIENT_ID = process.env.GITHUB_CLIENT_ID
@@ -195,6 +197,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           emailVerified: user.emailVerified,
           xp: user.xp,
           level: user.level,
+          isAdmin: checkIsAdmin(user.email),
         },
       }
     } catch (error) {
@@ -295,6 +298,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           emailVerified: user.emailVerified,
           xp: user.xp,
           level: user.level,
+          isAdmin: checkIsAdmin(user.email),
         },
       }
     } catch (error) {
@@ -339,6 +343,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           emailVerified: user.emailVerified,
           xp: user.xp,
           level: user.level,
+          isAdmin: checkIsAdmin(user.email),
         },
       }
     } catch (err) {

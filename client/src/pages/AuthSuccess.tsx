@@ -1,26 +1,30 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/useAuthStore";
-import { Code2 } from "lucide-react";
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
+import { Code2 } from 'lucide-react'
 
 export default function AuthSuccess() {
-  const navigate = useNavigate();
-  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const navigate = useNavigate()
+  const checkAuth = useAuthStore((state) => state.checkAuth)
 
   useEffect(() => {
     const init = async () => {
       // A small UX delay so the screen doesn't just flash instantly
-      await new Promise((r) => setTimeout(r, 500));
-      
-      // Call the backend /auth/refresh to validate the HttpOnly cookie 
+      await new Promise((r) => setTimeout(r, 500))
+
+      // Call the backend /auth/refresh to validate the HttpOnly cookie
       // and retrieve the user's profile and new JWT token
-      await checkAuth();
-      
-      // Redirect to the home page!
-      navigate("/");
-    };
-    init();
-  }, [checkAuth, navigate]);
+      await checkAuth()
+
+      const user = useAuthStore.getState().user
+      if (user?.isAdmin) {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
+    }
+    init()
+  }, [checkAuth, navigate])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center">
@@ -32,5 +36,5 @@ export default function AuthSuccess() {
         Validating your GitHub credentials and entering the arena
       </p>
     </div>
-  );
+  )
 }

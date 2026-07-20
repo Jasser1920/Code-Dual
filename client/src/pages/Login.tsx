@@ -22,7 +22,12 @@ export default function Login() {
     setLoading(true)
     try {
       await login({ email: form.email, password: form.password })
-      navigate('/')
+      const currentUser = useAuthStore.getState().user
+      if (currentUser?.isAdmin) {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
     } catch {
       // Error state is caught and set by Zustand store
     } finally {

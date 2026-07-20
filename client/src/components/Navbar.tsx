@@ -11,6 +11,7 @@ import {
   Send,
   Trophy,
   User,
+  ShieldCheck,
 } from 'lucide-react'
 import Avatar from './Avatar'
 import { api } from '../api/axios'
@@ -185,6 +186,20 @@ export default function Navbar() {
                   <Edit3 size={14} className="text-muted-foreground" /> Edit
                   Profile
                 </button>
+
+                {user?.isAdmin && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      navigate('/admin/users')
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-accent hover:bg-accent/10 flex items-center gap-3 font-['JetBrains_Mono'] transition-colors"
+                  >
+                    <ShieldCheck size={14} className="text-accent" /> Admin
+                    Panel
+                  </button>
+                )}
+
                 <div className="border-t border-border my-1"></div>
                 <button
                   onClick={handleLogout}

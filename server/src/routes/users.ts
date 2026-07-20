@@ -179,6 +179,39 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       matchHistory,
     }
   })
+  fastify.post(
+    '/reports',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const { reportedId, type, description } = request.body as {
+        reportedId?: string
+        type: string
+        description: string
+      }
+      const reporterId = (request.user as any).userId
+
+      if (!type || !description) {
+        return reply
+          .status(400)
+          .send({ error: 'Type and description are required' })
+      }
+
+      try {
+        const report = await prisma.report.create({
+          data: {
+            reporterId,
+            reportedId,
+            type,
+            description,
+          },
+        })
+        return { success: true, report }
+      } catch (error) {
+        request.log.error(error)
+        return reply.status(500).send({ error: 'Internal server error' })
+      }
+    }
+  )
 }
 
 export default usersRoutes

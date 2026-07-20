@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '../db.js'
 import { getXpToNextLevel, getXpForCurrentLevel } from '../utils/xp.js'
 import type { UpdateProfilePayload } from '@code-dual/shared'
+import { checkIsAdmin } from '../plugins/admin.js'
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   // Add authentication hook to all routes in this plugin
@@ -31,6 +32,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         mobileNumber: true,
         preferredLang: true,
         emailVerified: true,
+        email: true,
         xp: true,
         level: true,
       },
@@ -42,8 +44,9 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     const nextLevelXp = getXpToNextLevel(user.level)
     const currentLevelBaseXp = getXpForCurrentLevel(user.level)
+    const isAdmin = checkIsAdmin(user.email)
 
-    return { user: { ...user, nextLevelXp, currentLevelBaseXp } }
+    return { user: { ...user, nextLevelXp, currentLevelBaseXp, isAdmin } }
   })
 
   // PUT /profile

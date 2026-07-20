@@ -44,7 +44,10 @@ model User {
 model Problem {
   id           String   @id @default(uuid())
   title        String
+  description  String   @default("")
   difficulty   String
+  examples     Json?
+  constraints  Json?
   visibleTests Json     @map("visible_tests")
   hiddenTests  Json     @map("hidden_tests")
   tags         String[]
@@ -68,10 +71,10 @@ model Duel {
   endedAt   DateTime? @map("ended_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  player1     User         @relation("Player1", fields: [player1Id], references: [id])
-  player2     User         @relation("Player2", fields: [player2Id], references: [id])
-  winner      User?        @relation("Winner", fields: [winnerId], references: [id])
-  problem     Problem      @relation(fields: [problemId], references: [id])
+  player1     User         @relation("Player1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2     User         @relation("Player2", fields: [player2Id], references: [id], onDelete: Cascade)
+  winner      User?        @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
+  problem     Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
   submissions Submission[]
   eloHistory  EloHistory[]
 
@@ -92,8 +95,8 @@ model Submission {
   aiExplanation   String?  @map("ai_explanation")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  duel   Duel @relation(fields: [duelId], references: [id])
-  player User @relation(fields: [playerId], references: [id])
+  duel   Duel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([duelId])
   @@map("submissions")
@@ -108,8 +111,8 @@ model EloHistory {
   delta     Int
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id])
-  duel Duel @relation(fields: [duelId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duel Duel @relation(fields: [duelId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@map("elo_history")
@@ -123,8 +126,20 @@ model DailyChallenge {
   completions Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  problem Problem @relation(fields: [problemId], references: [id])
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@map("daily_challenges")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String   @map("reporter_id")
+  reportedId  String?  @map("reported_id")
+  type        String
+  description String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("reports")
 }

@@ -20,6 +20,12 @@ import ResetPassword from './pages/ResetPassword'
 import DuelArena from './pages/DuelArena'
 import Profile from './pages/Profile'
 import DuelResult from './pages/DuelResult'
+import AdminRoute from './components/AdminRoute'
+import AdminLayout from './pages/admin/AdminLayout'
+import UsersManager from './pages/admin/UsersManager'
+import ReportsManager from './pages/admin/ReportsManager'
+import ProblemsManager from './pages/admin/ProblemsManager'
+import HealthDashboard from './pages/admin/HealthDashboard'
 import { Toaster } from 'sonner'
 import { Analytics } from '@vercel/analytics/react'
 function AppContent() {
@@ -61,9 +67,12 @@ function AppContent() {
     '/reset-password',
     '/verify-email',
   ]
+
+  // Hide the standard navbar in admin layout too
   const isHiddenRoute =
     hiddenRoutes.includes(location.pathname) ||
-    location.pathname.startsWith('/duel')
+    location.pathname.startsWith('/duel') ||
+    location.pathname.startsWith('/admin')
   const showNavbar = isAuthenticated && !isHiddenRoute
 
   return (
@@ -84,6 +93,16 @@ function AppContent() {
           <Route path="/duel/:roomId/result" element={<DuelResult />} />
           {/* Profile & Social */}
           <Route path="/profile/:username" element={<Profile />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route index element={<HealthDashboard />} />
+              <Route path="users" element={<UsersManager />} />
+              <Route path="problems" element={<ProblemsManager />} />
+              <Route path="reports" element={<ReportsManager />} />
+            </Route>
+          </Route>
         </Routes>
       </div>
     </div>

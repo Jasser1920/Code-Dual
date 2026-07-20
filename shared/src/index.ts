@@ -16,6 +16,7 @@ export interface AuthUser extends UserProfile {
   email: string
   githubId?: string
   emailVerified: boolean
+  isAdmin?: boolean
 }
 
 export interface UpdateProfilePayload {
