@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Users,
@@ -9,11 +10,27 @@ import {
 } from 'lucide-react'
 import { cn } from '../../components/ui/utils'
 import { useAuthStore } from '../../store/useAuthStore'
+import { api } from '../../api/axios'
 
 export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuthStore()
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const response = await api.get('/admin/reports/pending-count')
+        setPendingCount(response.data.count)
+      } catch (error) {
+        console.error('Failed to fetch pending reports count', error)
+      }
+    }
+    fetchPendingCount()
+    const interval = setInterval(fetchPendingCount, 30000)
+    return () => clearInterval(interval)
+  }, [location.pathname]) // Refresh count when navigating
 
   const handleLogout = async () => {
     await logout()
@@ -55,6 +72,11 @@ export default function AdminLayout() {
               >
                 <item.icon className="w-4 h-4" />
                 {item.name}
+                {item.name === 'Reports' && pendingCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             )
           })}

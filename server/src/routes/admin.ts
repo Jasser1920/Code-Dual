@@ -191,7 +191,20 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // 3. Get all reports
+  // 3. Get pending reports count
+  fastify.get('/reports/pending-count', async (request, reply) => {
+    try {
+      const count = await prisma.report.count({
+        where: { status: 'PENDING' },
+      })
+      return { success: true, count }
+    } catch (error) {
+      request.log.error(error)
+      return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
+
+  // 4. Get all reports
   fastify.get('/reports', async (request, reply) => {
     try {
       const reports = await prisma.report.findMany({
@@ -204,13 +217,17 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // 4. Resolve a report
-  fastify.put('/reports/:id/resolve', async (request, reply) => {
+  // 5. Update a report status
+  fastify.put('/reports/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string }
+    const { status } = request.body as { status: string }
     try {
+      if (!['PENDING', 'HANDLING', 'REJECTED', 'RESOLVED'].includes(status)) {
+        return reply.status(400).send({ error: 'Invalid status' })
+      }
       const report = await prisma.report.update({
         where: { id },
-        data: { status: 'RESOLVED' },
+        data: { status },
       })
       return { success: true, report }
     } catch (error) {
@@ -223,6 +240,11 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   fastify.get('/problems', async (request, reply) => {
     try {
       const problems = await prisma.problem.findMany({
+        include: {
+          _count: {
+            select: { duels: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
       })
       return { success: true, problems }

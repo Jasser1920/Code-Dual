@@ -15,6 +15,9 @@ type Problem = {
   constraints?: string[]
   visibleTests?: any[]
   hiddenTests?: any[]
+  _count?: {
+    duels: number
+  }
 }
 
 export default function ProblemsManager() {
@@ -24,6 +27,7 @@ export default function ProblemsManager() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [viewingProblem, setViewingProblem] = useState<Problem | null>(null)
 
   // Form State
   const [formData, setFormData] = useState({
@@ -200,7 +204,8 @@ export default function ProblemsManager() {
             {problems.map((problem) => (
               <tr
                 key={problem.id}
-                className="hover:bg-secondary/20 transition-colors"
+                onClick={() => setViewingProblem(problem)}
+                className="hover:bg-secondary/20 transition-colors cursor-pointer"
               >
                 <td className="px-4 py-3">
                   <div className="font-bold text-foreground">
@@ -239,14 +244,20 @@ export default function ProblemsManager() {
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
                     <button
-                      onClick={() => openModalForEdit(problem)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openModalForEdit(problem)
+                      }}
                       className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-sm transition-colors"
                       title="Edit Problem"
                     >
                       <Edit size={16} />
                     </button>
                     <button
-                      onClick={() => handleDelete(problem.id, problem.title)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(problem.id, problem.title)
+                      }}
                       className="p-2 text-red-400 hover:bg-red-400/10 rounded-sm transition-colors"
                       title="Delete Problem"
                     >
@@ -410,6 +421,100 @@ export default function ProblemsManager() {
                 className="px-4 py-2 bg-accent text-white rounded-sm hover:bg-accent/80 transition-colors font-['Barlow_Condensed'] uppercase font-bold tracking-widest flex items-center gap-2"
               >
                 <Save size={16} /> Save Problem
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Problem Details Modal */}
+      {viewingProblem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col rounded-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="sticky top-0 bg-card border-b border-border p-4 flex justify-between items-center z-10">
+              <div className="flex items-center gap-3">
+                <Code2 className="text-accent" size={24} />
+                <h2 className="font-['Barlow_Condensed'] uppercase tracking-widest text-2xl font-bold text-foreground">
+                  Problem Details
+                </h2>
+              </div>
+              <button
+                onClick={() => setViewingProblem(null)}
+                className="p-2 hover:bg-secondary/50 rounded-sm text-muted-foreground transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Header Info */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-3xl font-bold text-foreground mb-2">
+                    {viewingProblem.title}
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        'px-3 py-1 text-xs font-bold rounded-sm uppercase tracking-widest',
+                        viewingProblem.difficulty === 'Easy'
+                          ? 'text-green-400 bg-green-400/10'
+                          : viewingProblem.difficulty === 'Medium'
+                            ? 'text-yellow-400 bg-yellow-400/10'
+                            : 'text-red-400 bg-red-400/10'
+                      )}
+                    >
+                      {viewingProblem.difficulty}
+                    </span>
+                    <span className="text-muted-foreground text-sm font-['JetBrains_Mono']">
+                      ID: {viewingProblem.id}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-secondary/30 border border-border rounded-sm p-3 text-center min-w[100px]">
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    Times Played
+                  </div>
+                  <div className="text-2xl font-bold font-['JetBrains_Mono'] text-accent">
+                    {viewingProblem._count?.duels || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <h4 className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
+                  Tags
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {viewingProblem.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs bg-secondary/50 px-2 py-1 rounded-sm border border-border text-foreground"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h4 className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
+                  Description
+                </h4>
+                <div className="bg-black/20 border border-border rounded-sm p-4 text-sm text-foreground/80 whitespace-pre-wrap font-['JetBrains_Mono']">
+                  {viewingProblem.description || 'No description provided.'}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border p-4 bg-secondary/30 flex justify-end sticky bottom-0">
+              <button
+                onClick={() => setViewingProblem(null)}
+                className="px-6 py-2 bg-accent text-white rounded-sm hover:bg-accent/80 transition-colors font-['Barlow_Condensed'] uppercase font-bold tracking-widest"
+              >
+                Close
               </button>
             </div>
           </div>

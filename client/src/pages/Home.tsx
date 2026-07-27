@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
   Clock,
@@ -15,6 +15,8 @@ import {
   X,
   Loader2,
   Link as LinkIcon,
+  Copy,
+  CheckCircle2,
 } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSocketStore } from '../lib/socket'
@@ -111,12 +113,33 @@ function DuelMockup() {
 
 export default function Home() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { isProfileComplete, isAuthenticated, user } = useAuthStore()
   const { socket, connect } = useSocketStore()
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [matchState, setMatchState] = useState<MatchState>('IDLE')
   const [topPlayers, setTopPlayers] = useState<any[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [inviteRoomId, setInviteRoomId] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState(false)
+
+  // Handle incoming invite link
+  useEffect(() => {
+    const inviteId = searchParams.get('invite')
+    if (inviteId && isAuthenticated && user) {
+      connect()
+      setTimeout(() => {
+        const currentSocket = useSocketStore.getState().socket
+        currentSocket?.emit('join_private_room', {
+          roomId: inviteId,
+          userId: user.id,
+        })
+      }, 500)
+
+      // Clean up the URL so it doesn't fire again
+      setSearchParams(new URLSearchParams())
+    }
+  }, [searchParams, isAuthenticated, user, connect, setSearchParams])
 
   useEffect(() => {
     if (isAuthenticated && !localStorage.getItem('code_dual_onboarding_seen')) {
@@ -145,7 +168,7 @@ export default function Home() {
     if (!socket) return
 
     const handlePrivateRoomCreated = (data: { roomId: string }) => {
-      navigate(`/duel/${data.roomId}`)
+      setInviteRoomId(data.roomId)
     }
 
     socket.on('private_room_created', handlePrivateRoomCreated)
@@ -192,9 +215,11 @@ export default function Home() {
     }, 100)
   }
 
-  const handleCancelSearch = () => {
-    setMatchState('IDLE')
-    socket?.emit('leave_queue')
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/?invite=${inviteRoomId}`
+    navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const features = [
@@ -574,7 +599,7 @@ export default function Home() {
       {/* Duel Block Modal */}
       {showBlockModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-md border border-destructive/30 bg-card p-6 shadow-2xl rounded-sm">
+          <div className="relative w-full max-w-md border border-destructive/30 bg-card p-6 shadow-2xl rounded-sm animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowBlockModal(false)}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
@@ -603,7 +628,7 @@ export default function Home() {
                 <button
                   onClick={() => {
                     setShowBlockModal(false)
-                    navigate('/profile/edit')
+                    navigate('/profile')
                   }}
                   className="flex-1 bg-accent text-accent-foreground font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm py-3 hover:bg-accent/90 transition-colors"
                 >
@@ -614,6 +639,69 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Waiting for Friend Modal */}
+      {inviteRoomId && matchState === 'IDLE' && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border shadow-2xl rounded-sm w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/50">
+              <h2 className="font-['Barlow_Condensed'] font-bold text-xl tracking-wider text-foreground flex items-center gap-2">
+                <Users className="text-accent" size={20} />
+                PRIVATE LOBBY
+              </h2>
+              <button
+                onClick={() => setInviteRoomId(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-secondary border border-border flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Loader2 size={32} className="text-accent animate-spin" />
+              </div>
+              <h3 className="font-['Barlow_Condensed'] text-2xl font-bold tracking-wider mb-2">
+                WAITING FOR FRIEND
+              </h3>
+              <p className="text-muted-foreground text-sm font-['Barlow'] mb-6">
+                Send the link below to your opponent. The duel will start
+                automatically once they join.
+              </p>
+
+              <div className="bg-background border border-border rounded-sm flex items-center overflow-hidden mb-2">
+                <div className="px-3 py-3 text-muted-foreground bg-secondary/30">
+                  <LinkIcon size={16} />
+                </div>
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/?invite=${inviteRoomId}`}
+                  className="flex-1 bg-transparent border-none text-sm font-['JetBrains_Mono'] px-3 py-3 text-foreground outline-none w-full"
+                />
+              </div>
+
+              <button
+                onClick={handleCopyLink}
+                className="w-full flex items-center justify-center gap-2 bg-accent text-accent-foreground font-bold font-['Barlow_Condensed'] text-lg tracking-widest py-3 rounded-sm hover:brightness-110 transition-all active:scale-[0.98]"
+              >
+                {copiedLink ? (
+                  <>
+                    <CheckCircle2 size={20} />
+                    COPIED TO CLIPBOARD
+                  </>
+                ) : (
+                  <>
+                    <Copy size={20} />
+                    COPY INVITE LINK
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && <OnboardingModal onClose={handleCloseOnboarding} />}
     </div>
   )
 }

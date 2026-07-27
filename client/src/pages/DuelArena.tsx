@@ -7,8 +7,17 @@ import { LanguageSelector } from '../components/editor/LanguageSelector'
 import { ProblemPanel } from '../components/editor/ProblemPanel'
 import type { Problem } from '../components/editor/ProblemPanel'
 import { RunPanel } from '../components/editor/RunPanel'
-import { ArrowLeft, Clock, Loader2, Check, AlertTriangle } from 'lucide-react'
+import {
+  ArrowLeft,
+  Clock,
+  Loader2,
+  Check,
+  AlertTriangle,
+  Flag,
+} from 'lucide-react'
 import axios from 'axios'
+import ReportModal from '../components/ReportModal'
+import { ConfettiOverlay } from '../components/ConfettiOverlay'
 import { JUDGE0_LANGUAGE_IDS } from '../utils/judge0'
 // Mock Problem Data
 const MOCK_PROBLEM: Problem = {
@@ -57,12 +66,14 @@ export default function DuelArena() {
 
   const [showForfeitModal, setShowForfeitModal] = useState(false)
   const [isForfeiting, setIsForfeiting] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const [opponentJoined, setOpponentJoined] = useState(false)
   const [opponentDisconnected, setOpponentDisconnected] = useState(false)
   const [opponentSubmitted, setOpponentSubmitted] = useState(false)
   const [opponentCode, setOpponentCode] = useState('')
   const [opponentProfile, setOpponentProfile] = useState<{
+    id: string
     username: string
     elo: number
     avatarUrl: string | null
@@ -410,18 +421,27 @@ export default function DuelArena() {
                 Rating: {opponentProfile?.elo || '-'}
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-border shrink-0">
-              {opponentProfile?.avatarUrl ? (
-                <img
-                  src={opponentProfile.avatarUrl}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">
-                  {(opponentProfile?.username || '?').charAt(0)}
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-sm transition-colors"
+                title="Report Opponent"
+              >
+                <Flag size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden border border-border shrink-0">
+                {opponentProfile?.avatarUrl ? (
+                  <img
+                    src={opponentProfile.avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">
+                    {(opponentProfile?.username || '?').charAt(0)}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -564,6 +584,18 @@ export default function DuelArena() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Confetti Overlay */}
+      {result && <ConfettiOverlay active={true} win={result.win} />}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <ReportModal
+          onClose={() => setShowReportModal(false)}
+          defaultType="Player Behavior"
+          reportedId={opponentProfile?.id}
+        />
       )}
     </div>
   )

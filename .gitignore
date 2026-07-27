@@ -144,3 +144,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Internship & scratch scripts
+journal_*
+test_fill.js
+temp_out.txt
+*.pdf
+

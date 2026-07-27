@@ -12,9 +12,11 @@ import {
   Trophy,
   User,
   ShieldCheck,
+  Flag,
 } from 'lucide-react'
 import Avatar from './Avatar'
 import { api } from '../api/axios'
+import ReportModal from './ReportModal'
 
 export default function Navbar() {
   const { user, isAuthenticated, logout, isProfileComplete } = useAuthStore()
@@ -25,6 +27,7 @@ export default function Navbar() {
   const [resendStatus, setResendStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle')
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const hiddenRoutes = ['/login', '/register', '/profile/edit']
   if (!isAuthenticated || hiddenRoutes.includes(location.pathname)) {
@@ -136,6 +139,13 @@ export default function Navbar() {
           >
             <Trophy size={18} />
           </NavLink>
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center gap-2 transition-colors px-4 py-2 rounded-full text-red-500/70 hover:text-red-500 hover:bg-red-500/10"
+            title="Report Bug"
+          >
+            <Flag size={18} />
+          </button>
         </div>
 
         {/* Right: Profile Dropdown */}
@@ -212,6 +222,9 @@ export default function Navbar() {
           )}
         </div>
       </div>
+      {showReportModal && (
+        <ReportModal onClose={() => setShowReportModal(false)} />
+      )}
     </nav>
   )
 }

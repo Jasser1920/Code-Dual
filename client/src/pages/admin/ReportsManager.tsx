@@ -8,7 +8,7 @@ type Report = {
   reportedId: string | null
   type: string
   description: string
-  status: 'PENDING' | 'RESOLVED'
+  status: 'PENDING' | 'HANDLING' | 'REJECTED' | 'RESOLVED'
   createdAt: string
 }
 
@@ -31,14 +31,17 @@ export default function ReportsManager() {
     fetchReports()
   }, [])
 
-  const handleResolve = async (id: string) => {
+  const handleStatusUpdate = async (id: string, status: string) => {
     try {
-      await api.put(`/admin/reports/${id}/resolve`)
+      await api.put(`/admin/reports/${id}/status`, { status })
       setReports((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: 'RESOLVED' } : r))
+        prev.map((r) =>
+          r.id === id ? { ...r, status: status as Report['status'] } : r
+        )
       )
     } catch (error) {
-      console.error('Failed to resolve report', error)
+      console.error('Failed to update report status', error)
+      alert('Failed to update report status')
     }
   }
 
@@ -74,13 +77,24 @@ export default function ReportsManager() {
           >
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                {report.status === 'PENDING' ? (
+                {report.status === 'PENDING' && (
                   <span className="inline-flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-sm text-xs font-bold font-['JetBrains_Mono']">
                     <AlertCircle size={14} /> PENDING
                   </span>
-                ) : (
+                )}
+                {report.status === 'HANDLING' && (
+                  <span className="inline-flex items-center gap-1 text-blue-500 bg-blue-500/10 px-2 py-1 rounded-sm text-xs font-bold font-['JetBrains_Mono']">
+                    <AlertCircle size={14} /> HANDLING
+                  </span>
+                )}
+                {report.status === 'RESOLVED' && (
                   <span className="inline-flex items-center gap-1 text-green-500 bg-green-500/10 px-2 py-1 rounded-sm text-xs font-bold font-['JetBrains_Mono']">
                     <CheckCircle2 size={14} /> RESOLVED
+                  </span>
+                )}
+                {report.status === 'REJECTED' && (
+                  <span className="inline-flex items-center gap-1 text-red-500 bg-red-500/10 px-2 py-1 rounded-sm text-xs font-bold font-['JetBrains_Mono']">
+                    <AlertCircle size={14} /> REJECTED
                   </span>
                 )}
                 <span className="font-['JetBrains_Mono'] text-sm text-accent font-bold">
@@ -98,20 +112,24 @@ export default function ReportsManager() {
               <div className="text-xs text-muted-foreground font-['JetBrains_Mono'] pt-2">
                 <div>Reporter ID: {report.reporterId}</div>
                 {report.reportedId && (
-                  <div>Reported User ID: {report.reportedId}</div>
+                  <div className="mt-1 inline-flex items-center gap-1 bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-1 rounded-sm font-bold">
+                    Target User ID: {report.reportedId}
+                  </div>
                 )}
               </div>
             </div>
 
             <div>
-              {report.status === 'PENDING' && (
-                <button
-                  onClick={() => handleResolve(report.id)}
-                  className="px-4 py-2 bg-accent text-white font-['Barlow_Condensed'] uppercase tracking-widest font-bold rounded-sm hover:bg-accent/80 transition-colors"
-                >
-                  Mark Resolved
-                </button>
-              )}
+              <select
+                value={report.status}
+                onChange={(e) => handleStatusUpdate(report.id, e.target.value)}
+                className="bg-black/40 border border-white/20 rounded-sm p-2 text-foreground font-['JetBrains_Mono'] text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none cursor-pointer"
+              >
+                <option value="PENDING">PENDING</option>
+                <option value="HANDLING">HANDLING</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="RESOLVED">RESOLVED</option>
+              </select>
             </div>
           </div>
         ))}
