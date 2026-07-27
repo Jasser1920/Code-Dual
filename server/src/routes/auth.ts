@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import jwt from 'jsonwebtoken'
 import { prisma } from '../db.js'
 import {
   sendVerificationEmail,
