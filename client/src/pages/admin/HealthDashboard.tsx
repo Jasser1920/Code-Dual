@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { api } from '../../api/axios'
 import {
   Activity,
   Database,
@@ -66,15 +66,9 @@ export default function HealthDashboard() {
   const fetchStats = async () => {
     try {
       const [resStats, resChart, resDuels] = await Promise.all([
-        axios.get('http://localhost:4000/admin/health-stats', {
-          withCredentials: true,
-        }),
-        axios.get('http://localhost:4000/admin/duels-chart', {
-          withCredentials: true,
-        }),
-        axios.get('http://localhost:4000/admin/active-duels', {
-          withCredentials: true,
-        }),
+        api.get('/admin/health-stats'),
+        api.get('/admin/duels-chart'),
+        api.get('/admin/active-duels'),
       ])
 
       if (resStats.data.success) setStats(resStats.data.data)
