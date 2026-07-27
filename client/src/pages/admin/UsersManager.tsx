@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../../api/axios'
-import { Ban, Trash2, CheckCircle2, ShieldCheck, Mail, X } from 'lucide-react'
+import { Trash2, CheckCircle2, Mail, X, AlertTriangle } from 'lucide-react'
 
 type User = {
   id: string
