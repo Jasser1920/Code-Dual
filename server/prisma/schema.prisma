@@ -37,6 +37,24 @@ model User {
   submissions  Submission[]
   eloHistory   EloHistory[]
 
+  // Social Relations
+  friendships      Friendship[]    @relation("UserFriends")
+  friendOf         Friendship[]    @relation("FriendOfUsers")
+  sentRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  blockedUsers     BlockedUser[]   @relation("UserBlocked")
+  blockedBy        BlockedUser[]   @relation("BlockedByUsers")
+  sentMessages     DirectMessage[] @relation("SentMessages")
+  receivedMessages DirectMessage[] @relation("ReceivedMessages")
+
+  // Gamification & Tournaments
+  achievements           UserAchievement[]
+  wonTournaments         Tournament[]            @relation("TournamentWinner")
+  tournamentParticipants TournamentParticipant[]
+  tournamentPlayer1      TournamentMatch[]       @relation("TournamentPlayer1")
+  tournamentPlayer2      TournamentMatch[]       @relation("TournamentPlayer2")
+  tournamentMatchWins    TournamentMatch[]       @relation("TournamentMatchWinner")
+
   @@index([elo])
   @@map("users")
 }
@@ -142,4 +160,144 @@ model Report {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("reports")
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  friendId  String   @map("friend_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOfUsers", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender   User @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User @relation("UserBlocked", fields: [userId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedByUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blockedId])
+  @@map("blocked_users")
+}
+
+model DirectMessage {
+  id         String   @id @default(uuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@map("direct_messages")
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  code        String   @unique // e.g. FIRST_WIN, SPEED_DEMON, STREAK_5, TOURNAMENT_CHAMPION
+  title       String
+  description String
+  iconUrl     String?  @map("icon_url")
+  xpReward    Int      @default(0) @map("xp_reward")
+  eloReward   Int      @default(0) @map("elo_reward")
+  isSecret    Boolean  @default(false) @map("is_secret")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Tournament {
+  id              String    @id @default(uuid())
+  title           String
+  description     String
+  imageUrl        String?   @map("image_url")
+  minElo          Int       @default(0) @map("min_elo")
+  maxPlayers      Int       @default(8) @map("max_players")
+  rewardBadgeCode String?   @default("TOURNAMENT_CHAMPION") @map("reward_badge_code")
+  startDate           DateTime? @map("start_date")
+  bracketGeneratedAt DateTime? @map("bracket_generated_at")
+  status              String    @default("UPCOMING") // UPCOMING, REGISTRATION_CLOSED, IN_PROGRESS, COMPLETED
+  winnerId        String?   @map("winner_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  winner       User?                   @relation("TournamentWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  participants TournamentParticipant[]
+  matches      TournamentMatch[]
+
+  @@map("tournaments")
+}
+
+model TournamentParticipant {
+  id           String   @id @default(uuid())
+  tournamentId String   @map("tournament_id")
+  userId       String   @map("user_id")
+  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  seed         Int?
+  isEliminated Boolean  @default(false) @map("is_eliminated")
+  appliedAt    DateTime @default(now()) @map("applied_at")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@map("tournament_participants")
+}
+
+model TournamentMatch {
+  id           String   @id @default(uuid())
+  tournamentId String   @map("tournament_id")
+  round        Int      // 1 = Quarterfinals, 2 = Semifinals, 3 = Finals
+  matchNumber  Int      @map("match_number")
+  player1Id    String?  @map("player1_id")
+  player2Id    String?  @map("player2_id")
+  winnerId     String?  @map("winner_id")
+  duelId       String?  @unique @map("duel_id")
+  status       String   @default("PENDING") // PENDING, READY, IN_PROGRESS, COMPLETED
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player1    User?      @relation("TournamentPlayer1", fields: [player1Id], references: [id], onDelete: SetNull)
+  player2    User?      @relation("TournamentPlayer2", fields: [player2Id], references: [id], onDelete: SetNull)
+  winner     User?      @relation("TournamentMatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+
+  @@map("tournament_matches")
 }

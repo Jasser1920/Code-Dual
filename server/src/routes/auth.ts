@@ -482,6 +482,49 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
   )
+
+  // 10. Get Current User Profile & Check Ban Status
+  fastify.get(
+    '/me',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      try {
+        const userId = request.user.userId
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            emailVerified: true,
+            isBanned: true,
+            banReason: true,
+            role: true,
+            avatarUrl: true,
+            elo: true,
+            rankTier: true,
+          },
+        })
+
+        if (!user) {
+          return reply.status(404).send({ error: 'User not found' })
+        }
+
+        if (user.isBanned) {
+          return reply.status(403).send({
+            error: `Your account has been banned. Reason: ${
+              user.banReason || 'Policy Violation'
+            }`,
+          })
+        }
+
+        return { success: true, user }
+      } catch (error) {
+        request.log.error(error)
+        return reply.status(500).send({ error: 'Internal server error' })
+      }
+    }
+  )
 }
 
 export default authRoutes

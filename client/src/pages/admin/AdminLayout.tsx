@@ -7,6 +7,7 @@ import {
   Code2,
   Activity,
   LogOut,
+  Trophy,
 } from 'lucide-react'
 import { cn } from '../../components/ui/utils'
 import { useAuthStore } from '../../store/useAuthStore'
@@ -41,6 +42,7 @@ export default function AdminLayout() {
     { name: 'Dashboard', path: '/admin', icon: Activity, exact: true },
     { name: 'Users', path: '/admin/users', icon: Users },
     { name: 'Problems', path: '/admin/problems', icon: Code2 },
+    { name: 'Tournaments', path: '/admin/tournaments', icon: Trophy },
     { name: 'Reports', path: '/admin/reports', icon: AlertTriangle },
   ]
 

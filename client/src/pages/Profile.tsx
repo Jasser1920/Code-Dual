@@ -9,9 +9,6 @@ import {
   ArrowRight,
   Loader2,
   Edit3,
-  Star,
-  Award,
-  Shield,
 } from 'lucide-react'
 import {
   LineChart,
@@ -42,24 +39,7 @@ const languageData = [
   { subject: 'Rust', A: 65, fullMark: 150 },
 ]
 
-// Mock Trophies
-const trophies = [
-  {
-    title: 'First Blood',
-    desc: 'Won first duel',
-    icon: <Star className="text-yellow-400" size={20} />,
-  },
-  {
-    title: 'Unstoppable',
-    desc: '3 Win Streak',
-    icon: <Award className="text-emerald-400" size={20} />,
-  },
-  {
-    title: 'David vs Goliath',
-    desc: 'Beat higher ELO',
-    icon: <Shield className="text-accent" size={20} />,
-  },
-]
+// Removed Mock Trophies - fetching real data from API now
 
 export default function Profile() {
   const { username } = useParams()
@@ -68,6 +48,8 @@ export default function Profile() {
   const [player, setPlayer] = useState<any>(null)
   const [ratingHistory, setRatingHistory] = useState<any[]>([])
   const [matchHistory, setMatchHistory] = useState<any[]>([])
+  const [achievements, setAchievements] = useState<any[]>([])
+  const [unlockedCount, setUnlockedCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const { user } = useAuthStore()
@@ -82,6 +64,18 @@ export default function Profile() {
         setPlayer(response.data.profile)
         setRatingHistory(response.data.ratingHistory)
         setMatchHistory(response.data.matchHistory)
+
+        try {
+          const achRes = await axios.get(
+            `${apiUrl}/achievements/user/${username}`
+          )
+          if (achRes.data.success) {
+            setAchievements(achRes.data.achievements)
+            setUnlockedCount(achRes.data.unlockedCount)
+          }
+        } catch (e) {
+          console.error('Failed to load user achievements', e)
+        }
       } catch (err) {
         console.error('Failed to fetch profile', err)
       } finally {
@@ -314,24 +308,42 @@ export default function Profile() {
         <div className="lg:col-span-2 space-y-6">
           {/* Trophies & Badges */}
           <div className="border border-border bg-card p-5">
-            <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm mb-4">
-              Trophies & Badges
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {trophies.map((t, i) => (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-foreground text-sm">
+                Trophies & Badges
+              </h2>
+              <span className="font-['JetBrains_Mono'] text-xs font-bold text-accent">
+                {unlockedCount} / {achievements.length} Unlocked
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {achievements.map((t) => (
                 <div
-                  key={i}
-                  className="flex items-center gap-4 bg-secondary/30 border border-border p-3 hover:bg-secondary/50 transition-colors"
+                  key={t.id}
+                  className={`flex items-start gap-3 p-3 border rounded-sm transition-all ${
+                    t.isUnlocked
+                      ? 'bg-accent/10 border-accent text-foreground shadow-sm'
+                      : 'bg-secondary/20 border-border text-muted-foreground opacity-50'
+                  }`}
                 >
-                  <div className="p-2 bg-background border border-border shrink-0">
-                    {t.icon}
+                  <div className="text-2xl shrink-0 p-1.5 bg-background border border-border rounded-sm flex items-center justify-center w-10 h-10">
+                    {t.iconUrl || '🏆'}
                   </div>
-                  <div>
-                    <div className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm text-foreground">
-                      {t.title}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-sm truncate flex items-center gap-1.5">
+                      <span>{t.title}</span>
+                      {t.isUnlocked && (
+                        <span className="text-[10px] bg-accent text-accent-foreground px-1 py-0.2 rounded font-['JetBrains_Mono']">
+                          ✓
+                        </span>
+                      )}
                     </div>
-                    <div className="font-['JetBrains_Mono'] text-[10px] text-muted-foreground mt-0.5">
-                      {t.desc}
+                    <div className="font-['JetBrains_Mono'] text-[11px] mt-0.5 line-clamp-2">
+                      {t.description}
+                    </div>
+                    <div className="font-['JetBrains_Mono'] text-[10px] text-accent mt-1 font-semibold">
+                      +{t.xpReward} XP{' '}
+                      {t.eloReward > 0 && `• +${t.eloReward} ELO`}
                     </div>
                   </div>
                 </div>

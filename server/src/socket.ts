@@ -6,11 +6,29 @@ import type { FastifyInstance } from 'fastify'
 import { judgeCode } from './services/judging.js'
 import { PrismaClient } from '@prisma/client'
 import { calculateMatchXp, calculateLevelFromXp } from './utils/xp.js'
+import { evaluateUserAchievements } from './services/achievements.js'
 
 const prisma = new PrismaClient()
 
 const DUEL_DURATION_SEC = 900 // 15 minutes
 const RECONNECT_TIMEOUT_SEC = 60 // 60 seconds
+
+export const onlineUsersMap = new Map<string, Set<string>>() // userId -> Set<socketId>
+let ioInstance: Server | null = null
+
+export function emitToUser(userId: string, event: string, payload: any) {
+  const socketIds = onlineUsersMap.get(userId)
+  if (socketIds && ioInstance) {
+    for (const socketId of socketIds) {
+      ioInstance.to(socketId).emit(event, payload)
+    }
+  }
+}
+
+export function isUserOnline(userId: string): boolean {
+  const sockets = onlineUsersMap.get(userId)
+  return !!sockets && sockets.size > 0
+}
 
 // We need a mock problem ID for duels
 let mockProblemId: string | null = null
@@ -156,20 +174,35 @@ export function setupSocket(app: FastifyInstance) {
       credentials: true,
     },
   })
+  ioInstance = io
 
   // Setup Redis Adapter for horizontal scaling
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 
   try {
-    const pubClient = new Redis(redisUrl, { lazyConnect: true })
+    const pubClient = new Redis(redisUrl, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      retryStrategy(times) {
+        if (times > 1) return null // Stop retrying when Redis is offline
+        return 200
+      },
+    })
     const subClient = pubClient.duplicate()
+
+    // Prevent unhandled error events in console when Redis is offline
+    pubClient.on('error', () => {})
+    subClient.on('error', () => {})
+
     pubClient
       .connect()
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient))
         app.log.info('Connected to Redis Adapter for Socket.io')
       })
-      .catch((err) => {
+      .catch(() => {
+        pubClient.disconnect()
+        subClient.disconnect()
         app.log.warn(
           'Redis is not running. Falling back to in-memory Socket.io adapter.'
         )
@@ -399,6 +432,33 @@ export function setupSocket(app: FastifyInstance) {
               },
             ],
           })
+
+          // Evaluate achievements for both players
+          const solveTimeSec = DUEL_DURATION_SEC - room.remainingTime
+          await evaluateUserAchievements(p1.userId, {
+            solveTimeSec:
+              winnerId === p1.userId && res1.score === 100
+                ? solveTimeSec
+                : undefined,
+          })
+          await evaluateUserAchievements(p2.userId, {
+            solveTimeSec:
+              winnerId === p2.userId && res2.score === 100
+                ? solveTimeSec
+                : undefined,
+          })
+
+          // Check if this duel belongs to a tournament match and process automatic victory advancement
+          if (room.dbDuelId && winnerId) {
+            const tMatch = await prisma.tournamentMatch.findFirst({
+              where: { duelId: room.dbDuelId },
+            })
+            if (tMatch) {
+              const { processTournamentMatchVictory } =
+                await import('./routes/tournaments.js')
+              await processTournamentMatchVictory(tMatch.id, winnerId)
+            }
+          }
         }
       }
     } catch (e) {
@@ -792,7 +852,18 @@ export function setupSocket(app: FastifyInstance) {
           hasSubmitted: false,
           disconnectedAt: null,
         })
-        startLobbyPhase(roomId, room, io)
+        socket.emit('private_room_joined', { roomId })
+        if (room.players.size >= 2) {
+          startLobbyPhase(roomId, room, io)
+        }
+      } else if (room && room.players.has(userId)) {
+        const p = room.players.get(userId)!
+        p.socketId = socket.id
+        p.disconnectedAt = null
+        socket.emit('private_room_joined', { roomId })
+        if (room.players.size >= 2 && room.status === 'WAITING_FOR_FRIEND') {
+          startLobbyPhase(roomId, room, io)
+        }
       } else {
         socket.emit('match_aborted')
       }
@@ -810,7 +881,133 @@ export function setupSocket(app: FastifyInstance) {
       }
     })
 
-    socket.on('disconnect', () => {
+    // Real-time presence tracking
+    socket.on('presence:online', async ({ userId }) => {
+      if (!userId) return
+      let sockets = onlineUsersMap.get(userId)
+      if (!sockets) {
+        sockets = new Set()
+        onlineUsersMap.set(userId, sockets)
+      }
+      const wasOffline = sockets.size === 0
+      sockets.add(socket.id)
+      ;(socket as any).userId = userId
+
+      if (wasOffline) {
+        try {
+          const friendships = await prisma.friendship.findMany({
+            where: { userId },
+            select: { friendId: true },
+          })
+          for (const f of friendships) {
+            emitToUser(f.friendId, 'friend:status_change', {
+              userId,
+              isOnline: true,
+            })
+          }
+        } catch (err) {
+          console.error('Error broadcasting online status:', err)
+        }
+      }
+    })
+
+    // Direct duel challenge invites
+    socket.on(
+      'duel:challenge',
+      async ({
+        challengerId,
+        challengerName,
+        targetId,
+        difficulty,
+        language,
+      }) => {
+        if (!targetId || !challengerId) return
+        const challengeId = crypto.randomUUID()
+        emitToUser(targetId, 'duel:challenge_receive', {
+          challengeId,
+          challengerId,
+          challengerName,
+          difficulty: difficulty || 'Medium',
+          language: language || 'javascript',
+          expiresAt: Date.now() + 120000, // 2 minutes
+        })
+      }
+    )
+
+    socket.on(
+      'duel:challenge_res',
+      async ({
+        challengeId,
+        challengerId,
+        targetId,
+        accepted,
+        difficulty,
+        language,
+      }) => {
+        if (!accepted) {
+          emitToUser(challengerId, 'duel:challenge_declined', {
+            challengeId,
+            targetId,
+          })
+          return
+        }
+
+        const roomId = crypto.randomUUID()
+        activeRooms.set(roomId, {
+          id: roomId,
+          dbDuelId: null,
+          status: 'WAITING_FOR_FRIEND',
+          remainingTime: DUEL_DURATION_SEC,
+          players: new Map(),
+          isProcessing: false,
+          hasStarted: false,
+          lobbyProblems: [],
+          playerAccepted: new Set(),
+          playerSelections: new Map(),
+          finalProblemId: null,
+        })
+
+        emitToUser(challengerId, 'duel:challenge_accepted', {
+          roomId,
+          targetId,
+          difficulty,
+          language,
+        })
+        emitToUser(targetId, 'duel:challenge_accepted', {
+          roomId,
+          challengerId,
+          difficulty,
+          language,
+        })
+      }
+    )
+
+    socket.on('disconnect', async () => {
+      const userId = (socket as any).userId
+      if (userId) {
+        const sockets = onlineUsersMap.get(userId)
+        if (sockets) {
+          sockets.delete(socket.id)
+          if (sockets.size === 0) {
+            onlineUsersMap.delete(userId)
+            try {
+              const friendships = await prisma.friendship.findMany({
+                where: { userId },
+                select: { friendId: true },
+              })
+              for (const f of friendships) {
+                emitToUser(f.friendId, 'friend:status_change', {
+                  userId,
+                  isOnline: false,
+                })
+              }
+            } catch (err) {
+              console.error('Error broadcasting offline status:', err)
+            }
+          }
+        }
+      }
+
       if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
         waitingPlayer = null
       }

@@ -31,3 +31,12 @@
     font-family: 'Barlow', sans-serif;
   }
 }
+
+@keyframes progress-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.animate-progress-5s {
+  animation: progress-shrink 5s linear forwards;
+}

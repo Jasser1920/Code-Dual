@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Send,
   Trophy,
+  Crown,
   User,
   ShieldCheck,
   Flag,
@@ -138,6 +139,19 @@ export default function Navbar() {
             title="Leaderboard"
           >
             <Trophy size={18} />
+          </NavLink>
+          <NavLink
+            to="/tournaments"
+            className={({ isActive }) =>
+              `flex items-center gap-2 transition-colors px-4 py-2 rounded-full ${
+                isActive
+                  ? 'text-accent bg-accent/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`
+            }
+            title="Tournaments"
+          >
+            <Crown size={18} />
           </NavLink>
           <button
             onClick={() => setShowReportModal(true)}

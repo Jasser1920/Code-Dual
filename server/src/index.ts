@@ -15,6 +15,9 @@ import executeRoutes from './routes/execute.js'
 import usersRoutes from './routes/users.js'
 import duelsRoutes from './routes/duels.js'
 import adminRoutes from './routes/admin.js'
+import socialRoutes from './routes/social.js'
+import { achievementRoutes } from './routes/achievements.js'
+import tournamentRoutes from './routes/tournaments.js'
 import { setupSocket } from './socket.js'
 
 dotenv.config()
@@ -56,6 +59,9 @@ app.register(executeRoutes, { prefix: '/execute' })
 app.register(usersRoutes, { prefix: '/users' })
 app.register(duelsRoutes, { prefix: '/duels' })
 app.register(adminRoutes, { prefix: '/admin' })
+app.register(socialRoutes, { prefix: '/social' })
+app.register(achievementRoutes, { prefix: '/achievements' })
+app.register(tournamentRoutes, { prefix: '/tournaments' })
 
 // Health check route
 app.get('/health', async () => {
